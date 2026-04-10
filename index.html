@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webex Smart Lobby</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f0fdfa; }
+        
+        /* Modal Animation */
+        .modal-enter { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Main Container -->
+    <div class="bg-white max-w-lg w-full rounded-2xl shadow-xl overflow-hidden border border-teal-100">
+        
+        <!-- Header -->
+        <div class="bg-teal-600 px-6 py-8 text-white text-center">
+            <div class="flex justify-center mb-4">
+                <!-- Video Camera Icon -->
+                <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold mb-1">Webex Smart Lobby</h1>
+            <p class="text-teal-100 text-sm">Piliin ang iyong pangalan upang sumali</p>
+        </div>
+
+        <!-- User List Section -->
+        <div class="p-6 md:p-8">
+            <p class="text-gray-600 mb-6 text-center text-sm md:text-base">
+                Awtomatiko naming bubuksan ang iyong Webex app (kasama ang password). Ikokopya lang namin ang iyong pangalan para madali mo itong mai-paste.
+            </p>
+
+            <!-- Ito ang lalagyan ng mga pangalan (Genereated by JavaScript) -->
+            <div id="user-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- Buttons will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Input for Copying Name (Binago mula sa password papuntang name) -->
+    <input type="text" id="hidden-clipboard" class="opacity-0 absolute -z-10" aria-hidden="true">
+
+    <!-- Error Modal (Lalabas kapag hindi pa ready ang meeting details) -->
+    <div id="error-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50 transition-opacity">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center mx-4 modal-enter">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800 mb-2">Hindi Pa Handa</h2>
+            <p class="text-gray-600 text-sm mb-6">
+                Ang Meeting Number at Password ay hindi pa nakatakda. Mangyaring i-setup muna ito sa configuration bago sumali.
+            </p>
+            <button onclick="closeErrorModal()" class="w-full bg-red-600 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-700 transition-colors">
+                Isara
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading/Redirect Modal -->
+    <div id="redirect-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50 transition-opacity">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center mx-4 modal-enter">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mb-4"></div>
+            <h2 class="text-xl font-bold text-gray-800 mb-2" id="modal-greeting">Sumasali...</h2>
+            <p class="text-gray-600 text-sm mb-4">
+                Kinopya namin ang iyong <strong>Pangalan</strong>. Awtomatiko kaming papasok sa meeting room.<br><br>
+                Kapag hiningi na ng Webex ang iyong pangalan, i-paste (Ctrl+V o Long Press) na lamang ito!
+            </p>
+            <p class="text-teal-600 text-xs font-semibold">Nire-redirect ka na sa Webex...</p>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURATION: PALITAN ANG MGA DETALYE DITO
+        // ==========================================
+        const meetingConfig = {
+            // Normal na Web Link (kung sakaling walang app ang guest)
+            link: "https://iglesianicristo-marikina.webex.com/iglesianicristo-marikina/j.php?MTID=ma25d48842c500dc7e5d3d0bd1ea16c43", 
+            // Numero ng Meeting (Kailangan ito para sa Auto-Join)
+            meetingNumber: "25573183334", 
+            // Password ng Meeting
+            password: "p@g5amBa" 
+        };
+
+        // Listahan ng mga inaasahang Guest (Display Name -> Expected Meeting Name)
+        const expectedGuests = [
+            { displayName: "Juan Dela Cruz", expectedName: "sampaguita village_3_1_dela cruz_juan" },
+            { displayName: "Maria Santos", expectedName: "sampaguita village_3_1_santos_maria" },
+            { displayName: "Pedro Penduko", expectedName: "sampaguita village_3_2_penduko_pedro" },
+            { displayName: "Ana Reyes", expectedName: "sampaguita village_4_1_reyes_ana" },
+            { displayName: "Mark Bautista", expectedName: "sampaguita village_4_2_bautista_mark" },
+            { displayName: "Guest User", expectedName: "sampaguita village_0_0_user_guest" }
+        ];
+        // ==========================================
+
+        // Render the buttons
+        const userGrid = document.getElementById('user-grid');
+        
+        expectedGuests.forEach(guest => {
+            const button = document.createElement('button');
+            button.className = "flex items-center justify-between w-full p-4 border border-gray-200 rounded-xl hover:border-teal-500 hover:bg-teal-50 hover:shadow-md transition-all group text-left";
+            
+            button.innerHTML = `
+                <div class="flex flex-col">
+                    <span class="font-medium text-gray-700 group-hover:text-teal-700">${guest.displayName}</span>
+                    <span class="text-xs text-gray-400 group-hover:text-teal-500">${guest.expectedName}</span>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 group-hover:text-teal-500 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            `;
+            
+            button.onclick = () => joinMeeting(guest.displayName, guest.expectedName);
+            userGrid.appendChild(button);
+        });
+
+        // Function para isara ang Error Modal
+        function closeErrorModal() {
+            const errorModal = document.getElementById('error-modal');
+            errorModal.classList.add('hidden');
+            errorModal.classList.remove('flex');
+        }
+
+        // Function executed when a name is clicked
+        function joinMeeting(displayName, expectedName) {
+            // 0. I-check kung handa na ang Meeting Number at Password
+            if (!meetingConfig.meetingNumber || meetingConfig.meetingNumber.trim() === "" || meetingConfig.meetingNumber === "123456789" ||
+                !meetingConfig.password || meetingConfig.password.trim() === "" || meetingConfig.password === "Password123!") {
+                
+                const errorModal = document.getElementById('error-modal');
+                errorModal.classList.remove('hidden');
+                errorModal.classList.add('flex');
+                return; // Pigilan ang pagtuloy ng code at redirect kung hindi pa handa
+            }
+
+            // 1. Kopyahin ang EXPECTED NAME sa clipboard
+            const hiddenInput = document.getElementById('hidden-clipboard');
+            hiddenInput.value = expectedName; 
+            hiddenInput.select();
+            document.execCommand('copy');
+            
+            // 2. Ipakita ang Loading Modal at i-update ang mensahe
+            const modal = document.getElementById('redirect-modal');
+            const greeting = document.getElementById('modal-greeting');
+            const instructionText = modal.querySelector('p.text-gray-600');
+            
+            greeting.innerText = `Kinokonekta si ${displayName}...`;
+            instructionText.innerHTML = `Kinopya namin ang iyong Meeting Name <strong>(${expectedName})</strong>. Awtomatiko kaming papasok sa meeting room.<br><br>Kapag hiningi na ng Webex ang iyong pangalan, i-paste (Ctrl+V o Long Press) na lamang ito!`;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            // 3. I-format ang URL para sa Auto-Join (Deep Link)
+            // Ngayon ay isasama na lang natin ang ID at Password. 
+            // Ito ay para awtomatiko silang makapasok, pero hihingin pa rin ng Webex ang pangalan (para mai-paste nila).
+            const encodedPassword = encodeURIComponent(meetingConfig.password);
+            const webexDeepLink = `webex://meet?id=${meetingConfig.meetingNumber}&password=${encodedPassword}`;
+
+            // 4. Subukang buksan ang Webex App agad-agad
+            setTimeout(() => {
+                window.location.href = webexDeepLink;
+            }, 1000);
+
+            // 5. Fallback: Kung walang Webex App ang user, pumunta sa normal na web link pagkalipas ng 3.5 segundo
+            setTimeout(() => {
+                window.location.href = meetingConfig.link;
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
