@@ -37,7 +37,7 @@
         <!-- User List Section -->
         <div class="p-6 md:p-8">
             <p class="text-gray-600 mb-6 text-center text-sm md:text-base">
-                Awtomatiko naming bubuksan ang iyong Webex app (sa PC man o Mobile). Ikokopya lang namin ang iyong pangalan para madali mo itong mai-paste.
+                Ididirekta ka namin sa Webex website pagkatapos kopyahin ang iyong pangalan. Mula roon ay maaari mong piliing buksan ang Webex App.
             </p>
 
             <!-- Ito ang lalagyan ng mga pangalan (Genereated by JavaScript) -->
@@ -74,10 +74,10 @@
             <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mb-4"></div>
             <h2 class="text-xl font-bold text-gray-800 mb-2" id="modal-greeting">Sumasali...</h2>
             <p class="text-gray-600 text-sm mb-4">
-                Kinopya namin ang iyong <strong>Pangalan</strong>. Awtomatiko kaming papasok sa meeting room.<br><br>
+                Kinopya namin ang iyong <strong>Pangalan</strong>. Ididirekta ka na namin sa Webex.<br><br>
                 Kapag hiningi na ng Webex ang iyong pangalan, i-paste (Ctrl+V o Long Press) na lamang ito!
             </p>
-            <p class="text-teal-600 text-xs font-semibold">Nire-redirect ka na sa Webex...</p>
+            <p class="text-teal-600 text-xs font-semibold">Nire-redirect ka na sa Webex website...</p>
         </div>
     </div>
 
@@ -86,9 +86,9 @@
         // CONFIGURATION: PALITAN ANG MGA DETALYE DITO
         // ==========================================
         const meetingConfig = {
-            // Normal na Web Link (kung sakaling walang app ang guest)
+            // Normal na Web Link (Ito na ang gagamitin natin ngayon bilang primary redirect)
             link: "https://iglesianicristo-marikina.webex.com/iglesianicristo-marikina/j.php?MTID=ma25d48842c500dc7e5d3d0bd1ea16c43", 
-            // Numero ng Meeting (Kailangan ito para sa Auto-Join)
+            // Numero ng Meeting
             meetingNumber: "25573183334", 
             // Password ng Meeting
             password: "p@g5amBa" 
@@ -167,26 +167,17 @@
             const instructionText = modal.querySelector('p.text-gray-600');
             
             greeting.innerText = `Kinokonekta si ${displayName}...`;
-            instructionText.innerHTML = `Kinopya namin ang iyong Meeting Name <strong>(${expectedName})</strong>. Awtomatiko kaming papasok sa meeting room.<br><br>Kapag hiningi na ng Webex ang iyong pangalan, i-paste (Ctrl+V o Long Press) na lamang ito!`;
+            instructionText.innerHTML = `Kinopya namin ang iyong Meeting Name <strong>(${expectedName})</strong>. Ididirekta ka na namin sa Webex website.<br><br>Kapag hiningi na ng Webex ang iyong pangalan, i-paste (Ctrl+V o Long Press) na lamang ito!`;
             
             modal.classList.remove('hidden');
             modal.classList.add('flex');
 
-            // 3. I-format ang URL para sa Auto-Join (Deep Link)
-            // Ngayon ay isasama na lang natin ang ID at Password. 
-            // Ito ay para awtomatiko silang makapasok, pero hihingin pa rin ng Webex ang pangalan (para mai-paste nila).
-            const encodedPassword = encodeURIComponent(meetingConfig.password);
-            const webexDeepLink = `webex://meet?id=${meetingConfig.meetingNumber}&password=${encodedPassword}`;
-
-            // 4. Subukang buksan ang Webex App agad-agad
-            setTimeout(() => {
-                window.location.href = webexDeepLink;
-            }, 1000);
-
-            // 5. Fallback: Kung walang Webex App ang user, pumunta sa normal na web link pagkalipas ng 3.5 segundo
+            // 3. I-redirect diretso sa Web Link
+            // Inalis na natin ang awtomatikong pag-trigger sa webex:// app deep link.
+            // Ngayon, ang Webex page na mismong magtatanong "Open Webex App?" sa screen.
             setTimeout(() => {
                 window.location.href = meetingConfig.link;
-            }, 3500);
+            }, 3000); // Binigyan ng 3 segundo para mabasa ng user ang instruction
         }
     </script>
 </body>
