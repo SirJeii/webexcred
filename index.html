@@ -37,7 +37,7 @@
         <!-- User List Section -->
         <div class="p-6 md:p-8">
             <p class="text-gray-600 mb-6 text-center text-sm md:text-base">
-                Awtomatiko naming bubuksan ang iyong Webex app (kasama ang password). Ikokopya lang namin ang iyong pangalan para madali mo itong mai-paste.
+                Awtomatiko naming bubuksan ang iyong Webex app (sa PC man o Mobile). Ikokopya lang namin ang iyong pangalan para madali mo itong mai-paste.
             </p>
 
             <!-- Ito ang lalagyan ng mga pangalan (Genereated by JavaScript) -->
@@ -134,7 +134,7 @@
         }
 
         // Function executed when a name is clicked
-        function joinMeeting(displayName, expectedName) {
+        async function joinMeeting(displayName, expectedName) {
             // 0. I-check kung handa na ang Meeting Number at Password
             if (!meetingConfig.meetingNumber || meetingConfig.meetingNumber.trim() === "" || meetingConfig.meetingNumber === "123456789" ||
                 !meetingConfig.password || meetingConfig.password.trim() === "" || meetingConfig.password === "Password123!") {
@@ -145,11 +145,21 @@
                 return; // Pigilan ang pagtuloy ng code at redirect kung hindi pa handa
             }
 
-            // 1. Kopyahin ang EXPECTED NAME sa clipboard
-            const hiddenInput = document.getElementById('hidden-clipboard');
-            hiddenInput.value = expectedName; 
-            hiddenInput.select();
-            document.execCommand('copy');
+            // 1. Kopyahin ang EXPECTED NAME sa clipboard (In-optimize para sa Mobile)
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(expectedName);
+                } else {
+                    const hiddenInput = document.getElementById('hidden-clipboard');
+                    hiddenInput.value = expectedName; 
+                    hiddenInput.focus();
+                    hiddenInput.select();
+                    hiddenInput.setSelectionRange(0, 99999); // Mahalaga ito para sa mga mobile devices (iOS)
+                    document.execCommand('copy');
+                }
+            } catch (err) {
+                console.error("Hindi makopya ang pangalan: ", err);
+            }
             
             // 2. Ipakita ang Loading Modal at i-update ang mensahe
             const modal = document.getElementById('redirect-modal');
