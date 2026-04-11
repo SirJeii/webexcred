@@ -283,20 +283,29 @@
         </div>
     </div>
 
-    <!-- Hidden Input for Copying Name -->
-    <input type="text" id="hidden-clipboard" class="opacity-0 absolute -z-10" aria-hidden="true">
-
-    <!-- Loading/Redirect Modal -->
+    <!-- Manual Copy / Proceed to Webex Modal -->
     <div id="redirect-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden items-center justify-center z-50 transition-opacity">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center mx-4 modal-enter">
-            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mb-4"></div>
-            <h2 class="text-xl font-bold text-gray-800 mb-2" id="modal-greeting">Sumasali...</h2>
-            <div class="text-gray-600 text-sm mb-4 space-y-2">
-                <p>Kinopya namin ang iyong format ng pangalan.</p>
-                <div class="bg-teal-50 text-teal-800 font-mono text-xs p-2 rounded-lg break-all" id="copied-name-display"></div>
-                <p>Kapag hiningi na ng Webex ang iyong pangalan, <strong>i-paste (Ctrl+V o Long Press)</strong> na lamang ito!</p>
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-sm w-full mx-4 modal-enter">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 text-center" id="modal-greeting">Handa na!</h2>
+            <div class="text-gray-600 text-sm mb-6 space-y-3">
+                <p>Kung hindi awtomatikong nakopya ang iyong pangalan, i-click ang <strong>Copy</strong> button sa ibaba.</p>
+                
+                <div class="bg-teal-50 flex items-center justify-between p-3 rounded-lg border border-teal-200">
+                    <span class="text-teal-800 font-mono text-xs break-all select-all mr-2" id="copied-name-display"></span>
+                    <button onclick="window.manualCopyName()" id="manual-copy-btn" class="bg-teal-600 text-white px-4 py-2 rounded-md text-xs font-bold hover:bg-teal-700 active:scale-95 transition-all flex-shrink-0 shadow-sm">
+                        Copy
+                    </button>
+                </div>
+                
+                <p class="text-xs text-gray-500 mt-2 text-center bg-gray-50 p-2 rounded-md border border-gray-100">
+                    Kapag nasa Webex App ka na, <strong>i-paste (Long Press > Paste)</strong> ito sa patlang ng iyong pangalan.
+                </p>
             </div>
-            <p class="text-teal-600 text-xs font-semibold">Nire-redirect ka na sa Webex...</p>
+            
+            <button onclick="window.proceedToWebex()" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition-colors shadow-lg flex items-center justify-center">
+                <span>Pumunta sa Webex</span>
+                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+            </button>
         </div>
     </div>
 
@@ -957,7 +966,7 @@
             }
         }
 
-        // Webex Redirect Logic
+        // Webex Redirect at Copy Logic (Na-update para sa mobile)
         window.executeJoinSequence = async function() {
             window.closeModal('reminder-modal');
 
@@ -979,32 +988,67 @@
                 console.error("Hindi ma-update ang tracking count", e);
             }
 
-            try {
-                if (navigator.clipboard && window.isSecureContext) {
-                    await navigator.clipboard.writeText(selectedMember.expectedName);
-                } else {
-                    const hiddenInput = document.getElementById('hidden-clipboard');
-                    hiddenInput.value = selectedMember.expectedName; 
-                    hiddenInput.focus();
-                    hiddenInput.select();
-                    hiddenInput.setSelectionRange(0, 99999);
-                    document.execCommand('copy');
-                }
-            } catch (err) {
-                console.error("Hindi makopya ang pangalan: ", err);
-            }
+            // Subukang awtomatikong kopyahin nang walang warning kung pumalya
+            window.manualCopyName(true);
             
             const modal = document.getElementById('redirect-modal');
-            document.getElementById('modal-greeting').innerText = `Kinokonekta si ${selectedMember.displayName}...`;
+            
+            // Ipakita lang ang unang pangalan sa pagbati
+            const shortName = selectedMember.displayName.split(' ')[0];
+            document.getElementById('modal-greeting').innerText = `Handa na, ${shortName}!`;
             document.getElementById('copied-name-display').innerText = selectedMember.expectedName;
             
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            
+            // Wala nang auto-redirect dito para may oras ang user kumopya bago pindutin ang "Pumunta sa Webex"
+        };
 
-            setTimeout(() => {
-                window.location.href = meetingConfig.link;
-            }, 3500); 
-        }
+        // Pinatibay na pagkopya na gumagana sa karamihan ng mobile browsers
+        window.manualCopyName = function(isSilent = false) {
+            if (!selectedMember) return;
+            const nameToCopy = selectedMember.expectedName;
+            
+            // Gumawa ng invisible textarea
+            const textArea = document.createElement("textarea");
+            textArea.value = nameToCopy;
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0"; // Mas ligtas kaysa display: none
+            
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful && !isSilent) {
+                    const copyBtn = document.getElementById('manual-copy-btn');
+                    copyBtn.innerText = 'Copied!';
+                    copyBtn.classList.replace('bg-teal-600', 'bg-green-600');
+                    copyBtn.classList.replace('hover:bg-teal-700', 'hover:bg-green-700');
+                    
+                    // Ibalik sa dati pagkatapos ng 2 segundo
+                    setTimeout(() => {
+                        copyBtn.innerText = 'Copy';
+                        copyBtn.classList.replace('bg-green-600', 'bg-teal-600');
+                        copyBtn.classList.replace('hover:bg-green-700', 'hover:bg-teal-700');
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+                if (!isSilent) {
+                    window.showNotification("Error", "Hindi makopya ang pangalan. Mangyaring i-highlight ang text at kopyahin ng mano-mano.", true);
+                }
+            }
+
+            document.body.removeChild(textArea);
+        };
+
+        window.proceedToWebex = function() {
+            window.location.href = meetingConfig.link;
+        };
 
     </script>
 </body>
