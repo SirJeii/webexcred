@@ -15,170 +15,997 @@
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
+        
+        /* Custom Scrollbar for Admin List */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
+    <!-- Loading Screen (Initial Data Fetch) -->
+    <div id="initial-loading" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center transition-opacity">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mb-4"></div>
+        <p class="text-teal-700 font-medium">Kinukuha ang listahan ng mga miyembro...</p>
+    </div>
+
+    <!-- Setup / Onboarding Modal (Steps 1 & 2) -->
+    <div id="setup-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50 transition-opacity hidden">
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center mx-4 modal-enter">
+            
+            <!-- Step 1: Uninstall -->
+            <div id="setup-step-1">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4 text-red-600">
+                    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                </div>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Hakbang 1 ng 2</h2>
+                <p class="text-gray-600 text-sm md:text-base mb-6">
+                    I-uninstall muna ang <strong>Webex App</strong> sa iyong device upang masigurado na pinakabagong (updated) na bersyon ang iyong magagamit.
+                </p>
+                <button onclick="window.nextSetupStep()" class="w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-teal-700 transition-colors shadow-lg">
+                    Done (Tapos Na)
+                </button>
+            </div>
+
+            <!-- Step 2: Reinstall (Hidden initially) -->
+            <div id="setup-step-2" class="hidden">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 mb-4 text-blue-600">
+                    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                </div>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Hakbang 2 ng 2</h2>
+                <p class="text-gray-600 text-sm md:text-base mb-6">
+                    I-reinstall o i-download muli ang <strong>Webex App</strong> mula sa App Store o Google Play Store.
+                </p>
+                <button onclick="window.finishSetup()" class="w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-teal-700 transition-colors shadow-lg">
+                    Done (Tapos Na)
+                </button>
+            </div>
+
+        </div>
+    </div>
+
     <!-- Main Container -->
-    <div class="bg-white max-w-lg w-full rounded-2xl shadow-xl overflow-hidden border border-teal-100">
+    <div class="bg-white max-w-lg w-full rounded-2xl shadow-xl overflow-hidden border border-teal-100 relative z-10">
         
         <!-- Header -->
-        <div class="bg-teal-600 px-6 py-8 text-white text-center">
-            <div class="flex justify-center mb-4">
-                <!-- Video Camera Icon -->
-                <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <div class="bg-teal-600 px-6 py-6 text-white text-center relative">
+            <div class="flex justify-center mb-3">
+                <svg onclick="window.hiddenAdminAccess()" class="w-10 h-10 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                 </svg>
             </div>
             <h1 class="text-2xl font-bold mb-1">Webex Smart Lobby</h1>
-            <p class="text-teal-100 text-sm">Piliin ang iyong pangalan upang sumali</p>
+            <p class="text-teal-100 text-sm">Sundan ang mga hakbang para sumali</p>
         </div>
 
-        <!-- User List Section -->
-        <div class="p-6 md:p-8">
-            <p class="text-gray-600 mb-6 text-center text-sm md:text-base">
-                Ididirekta ka namin sa Webex website pagkatapos kopyahin ang iyong pangalan. Mula roon ay maaari mong piliing buksan ang Webex App.
-            </p>
+        <!-- Dynamic Selection Section -->
+        <div class="p-6 md:p-8 min-h-[300px] flex flex-col">
+            <div class="flex items-center justify-between mb-6">
+                <button id="back-btn" class="hidden text-teal-600 hover:text-teal-800 flex items-center text-sm font-bold transition-colors" onclick="window.goBack()">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    Bumalik
+                </button>
+                <h2 id="selection-title" class="text-lg font-bold text-gray-800 text-center flex-1">Piliin ang Purok</h2>
+                <div id="spacer" class="w-16 hidden"></div> 
+            </div>
 
-            <!-- Ito ang lalagyan ng mga pangalan (Genereated by JavaScript) -->
-            <div id="user-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <!-- Buttons will be injected here -->
+            <!-- Dynamic Buttons will be injected here -->
+            <div id="dynamic-grid" class="grid grid-cols-1 gap-3 sm:grid-cols-2 flex-1 content-start">
             </div>
         </div>
     </div>
 
-    <!-- Hidden Input for Copying Name (Binago mula sa password papuntang name) -->
-    <input type="text" id="hidden-clipboard" class="opacity-0 absolute -z-10" aria-hidden="true">
-
-    <!-- Error Modal (Lalabas kapag hindi pa ready ang meeting details) -->
-    <div id="error-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50 transition-opacity">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center mx-4 modal-enter">
-            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+    <!-- Admin Modal -->
+    <div id="admin-modal" class="fixed inset-0 bg-gray-900 bg-opacity-90 hidden items-center justify-center z-50 transition-opacity">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 h-[90vh] flex flex-col overflow-hidden modal-enter">
+            <!-- Admin Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Admin Dashboard
+                </h2>
+                <button onclick="window.closeModal('admin-modal')" class="text-gray-400 hover:text-gray-600 bg-white rounded-full p-1 border">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
-            <h2 class="text-xl font-bold text-gray-800 mb-2">Hindi Pa Handa</h2>
-            <p class="text-gray-600 text-sm mb-6">
-                Ang Meeting Number at Password ay hindi pa nakatakda. Mangyaring i-setup muna ito sa configuration bago sumali.
-            </p>
-            <button onclick="closeErrorModal()" class="w-full bg-red-600 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-700 transition-colors">
-                Isara
+            
+            <!-- Admin Tabs -->
+            <div class="flex border-b border-gray-200 bg-white px-6">
+                <button id="tab-btn-list" onclick="window.switchAdminTab('list')" class="px-4 py-3 text-sm font-bold text-teal-600 border-b-2 border-teal-600 focus:outline-none">Listahan ng Users</button>
+                <button id="tab-btn-import" onclick="window.switchAdminTab('import')" class="px-4 py-3 text-sm font-medium text-gray-500 hover:text-teal-600 focus:outline-none transition-colors">Import Data</button>
+            </div>
+
+            <!-- Tab Content: Listahan -->
+            <div id="admin-tab-list" class="flex-1 overflow-y-auto p-4 md:p-6 bg-white custom-scrollbar">
+                
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                    <p class="text-gray-600 text-sm">Mas madaling ma-monitor ang status ng bawat miyembro dito.</p>
+                    <button onclick="window.confirmClearDatabase()" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center border border-red-200 transition-colors">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Burahin Lahat ng Name
+                    </button>
+                </div>
+
+                <!-- Purok Tabs Filter -->
+                <div class="mb-4">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Piliin ang Purok:</h3>
+                    <div id="admin-purok-tabs" class="flex space-x-2 border-b border-gray-100 pb-2 overflow-x-auto custom-scrollbar">
+                        <!-- Populated by Javascript -->
+                    </div>
+                </div>
+
+                <!-- Statistics Section -->
+                <div class="mb-6">
+                    <h3 id="stat-label-context" class="text-xs font-bold text-teal-800 uppercase tracking-wider mb-2 bg-teal-50 inline-block px-2 py-1 rounded-md">Mga Bilang para sa: Lahat ng Purok</h3>
+                    <div class="grid grid-cols-3 gap-2 sm:gap-4">
+                        <div class="bg-teal-50 border border-teal-100 rounded-xl p-3 sm:p-4 text-center shadow-sm">
+                            <div class="text-xl sm:text-3xl font-bold text-teal-700" id="stat-total">0</div>
+                            <div class="text-[10px] sm:text-xs text-teal-600 font-semibold uppercase mt-1">Kabuuang Bilang</div>
+                        </div>
+                        <div class="bg-green-50 border border-green-100 rounded-xl p-3 sm:p-4 text-center shadow-sm">
+                            <div class="text-xl sm:text-3xl font-bold text-green-700" id="stat-joined">0</div>
+                            <div class="text-[10px] sm:text-xs text-green-600 font-semibold uppercase mt-1">Nakapasok</div>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 sm:p-4 text-center shadow-sm">
+                            <div class="text-xl sm:text-3xl font-bold text-gray-700" id="stat-pending">0</div>
+                            <div class="text-[10px] sm:text-xs text-gray-500 font-semibold uppercase mt-1">Pending</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Connection Status Filter Tabs -->
+                <div class="mb-6">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">I-filter ang Status:</h3>
+                    <div class="flex space-x-2 border-b border-gray-100 pb-3 overflow-x-auto custom-scrollbar">
+                        <button id="filter-btn-all" onclick="window.setAdminFilterStatus('all')" class="px-4 py-1.5 text-sm font-semibold rounded-full bg-teal-100 text-teal-800 transition-colors whitespace-nowrap">Lahat</button>
+                        <button id="filter-btn-joined" onclick="window.setAdminFilterStatus('joined')" class="px-4 py-1.5 text-sm font-semibold rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors whitespace-nowrap">Nakapasok</button>
+                        <button id="filter-btn-pending" onclick="window.setAdminFilterStatus('pending')" class="px-4 py-1.5 text-sm font-semibold rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors whitespace-nowrap">Pending</button>
+                    </div>
+                </div>
+
+                <div id="admin-list-container" class="space-y-6">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Tab Content: Import Data -->
+            <div id="admin-tab-import" class="flex-1 overflow-y-auto p-6 bg-white hidden custom-scrollbar">
+                
+                <div class="mb-8 p-5 bg-teal-50 rounded-xl border border-teal-100">
+                    <h3 class="font-bold text-teal-800 text-lg mb-2">1. I-download ang Template</h3>
+                    <p class="text-sm text-teal-700 mb-4">Gamitin ang Excel template na ito upang mapanatili ang tamang format ng data.</p>
+                    <button onclick="window.downloadTemplate()" class="bg-white border border-teal-600 text-teal-700 font-bold py-2 px-4 rounded-lg hover:bg-teal-600 hover:text-white transition-colors flex items-center text-sm shadow-sm">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download Excel (.csv) Template
+                    </button>
+                </div>
+
+                <div class="p-5 bg-blue-50 rounded-xl border border-blue-100">
+                    <h3 class="font-bold text-blue-800 text-lg mb-2">2. I-upload ang Data</h3>
+                    <p class="text-sm text-blue-700 mb-4">Pagkatapos punan ang template, i-upload ang file (.csv) dito upang ma-import ang mga miyembro sa database.</p>
+                    
+                    <div class="flex items-center justify-center w-full">
+                        <label for="csv-upload" class="flex flex-col items-center justify-center w-full h-40 border-2 border-blue-300 border-dashed rounded-xl cursor-pointer bg-white hover:bg-blue-50 transition-colors">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <svg class="w-10 h-10 mb-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                <p class="mb-2 text-sm text-blue-600 font-semibold"><span class="font-bold">I-click para mag-upload</span> o i-drag and drop</p>
+                                <p class="text-xs text-blue-500">CSV file lamang</p>
+                            </div>
+                            <input id="csv-upload" type="file" class="hidden" accept=".csv" onchange="window.handleCSVUpload(event)" />
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Loading overlay for import -->
+                <div id="import-loading" class="hidden mt-4 text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mb-2"></div>
+                    <p class="text-blue-700 font-medium text-sm">Nag-iimport sa database...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modals for Notifications & Confirmations (Replaces alert() and confirm()) -->
+    
+    <!-- Notification Modal -->
+    <div id="notification-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden items-center justify-center z-[60] transition-opacity">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 modal-enter text-center">
+            <div id="notif-icon-success" class="hidden mx-auto items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4 text-green-600">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <div id="notif-icon-error" class="hidden mx-auto items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4 text-red-600">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </div>
+            
+            <h2 id="notif-title" class="text-xl font-bold text-gray-800 mb-2">Mensahe</h2>
+            <p id="notif-message" class="text-gray-600 text-sm mb-6"></p>
+            <button onclick="window.closeNotification()" class="w-full bg-gray-800 text-white font-bold py-2 px-4 rounded-xl hover:bg-gray-900 transition-colors">
+                OK
             </button>
         </div>
     </div>
 
-    <!-- Loading/Redirect Modal -->
-    <div id="redirect-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50 transition-opacity">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center mx-4 modal-enter">
-            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mb-4"></div>
-            <h2 class="text-xl font-bold text-gray-800 mb-2" id="modal-greeting">Sumasali...</h2>
-            <p class="text-gray-600 text-sm mb-4">
-                Kinopya namin ang iyong <strong>Pangalan</strong>. Ididirekta ka na namin sa Webex.<br><br>
-                Kapag hiningi na ng Webex ang iyong pangalan, i-paste (Ctrl+V o Long Press) na lamang ito!
-            </p>
-            <p class="text-teal-600 text-xs font-semibold">Nire-redirect ka na sa Webex website...</p>
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden items-center justify-center z-[60] transition-opacity">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 modal-enter text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4 text-yellow-600">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h2 id="confirm-title" class="text-xl font-bold text-gray-800 mb-2">Sigurado ka ba?</h2>
+            <p id="confirm-message" class="text-gray-600 text-sm mb-6"></p>
+            <div class="flex gap-3">
+                <button onclick="window.closeConfirm()" class="flex-1 bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-xl hover:bg-gray-300 transition-colors">
+                    Kanselahin
+                </button>
+                <button id="confirm-action-btn" class="flex-1 bg-red-600 text-white font-bold py-2 px-4 rounded-xl hover:bg-red-700 transition-colors">
+                    Oo, Burahin
+                </button>
+            </div>
         </div>
     </div>
 
-    <script>
-        // ==========================================
-        // CONFIGURATION: PALITAN ANG MGA DETALYE DITO
-        // ==========================================
+    <!-- Reminder Modal (Before Joining) -->
+    <div id="reminder-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden items-center justify-center z-50 transition-opacity">
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-sm w-full mx-4 modal-enter">
+            <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-yellow-100 mb-4 text-yellow-600">
+                <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold text-center text-gray-800 mb-4">Mahalagang Paalala</h2>
+            
+            <div class="bg-gray-50 p-4 rounded-xl space-y-4 mb-6 border border-gray-100">
+                <div class="flex items-start">
+                    <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <p class="text-sm text-gray-700">Panatilihin na <strong>Naka-ON</strong> ang camera.</p>
+                </div>
+                <div class="flex items-start">
+                    <svg class="w-6 h-6 text-red-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18"></path></svg>
+                    <p class="text-sm text-gray-700">Panatilihin na <strong>Naka-OFF</strong> (Mute) ang mic.</p>
+                </div>
+                <div class="flex items-start">
+                    <svg class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    <p class="text-sm text-gray-700">Siguraduhing <strong>maayos ang dako</strong> at pormal ang pananamit.</p>
+                </div>
+            </div>
+
+            <button onclick="window.executeJoinSequence()" class="w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-teal-700 transition-colors shadow-lg">
+                Naiintindihan ko, Sumali na
+            </button>
+        </div>
+    </div>
+
+    <!-- Hidden Input for Copying Name -->
+    <input type="text" id="hidden-clipboard" class="opacity-0 absolute -z-10" aria-hidden="true">
+
+    <!-- Loading/Redirect Modal -->
+    <div id="redirect-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden items-center justify-center z-50 transition-opacity">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center mx-4 modal-enter">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-teal-500 border-t-transparent mb-4"></div>
+            <h2 class="text-xl font-bold text-gray-800 mb-2" id="modal-greeting">Sumasali...</h2>
+            <div class="text-gray-600 text-sm mb-4 space-y-2">
+                <p>Kinopya namin ang iyong format ng pangalan.</p>
+                <div class="bg-teal-50 text-teal-800 font-mono text-xs p-2 rounded-lg break-all" id="copied-name-display"></div>
+                <p>Kapag hiningi na ng Webex ang iyong pangalan, <strong>i-paste (Ctrl+V o Long Press)</strong> na lamang ito!</p>
+            </div>
+            <p class="text-teal-600 text-xs font-semibold">Nire-redirect ka na sa Webex...</p>
+        </div>
+    </div>
+
+    <!-- Firebase Logic & App Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, writeBatch, getDocs, updateDoc, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuration
         const meetingConfig = {
-            // Normal na Web Link (Ito na ang gagamitin natin ngayon bilang primary redirect)
             link: "https://iglesianicristo-marikina.webex.com/iglesianicristo-marikina/j.php?MTID=m73f8b93d9b88720b056fec3a41f29d75", 
-            // Numero ng Meeting
             meetingNumber: "25614060831", 
-            // Password ng Meeting
             password: "F@m1Ly_HoUr" 
         };
 
-        // Listahan ng mga inaasahang Guest (Display Name -> Expected Meeting Name)
-        const expectedGuests = [
-            { displayName: "Juan Dela Cruz", expectedName: "sampaguita village_3_1_dela cruz_juan" },
-            { displayName: "Maria Santos", expectedName: "sampaguita village_3_1_santos_maria" },
-            { displayName: "Pedro Penduko", expectedName: "sampaguita village_3_2_penduko_pedro" },
-            { displayName: "Ana Reyes", expectedName: "sampaguita village_4_1_reyes_ana" },
-            { displayName: "Mark Bautista", expectedName: "sampaguita village_4_2_bautista_mark" },
-            { displayName: "Guest User", expectedName: "sampaguita village_0_0_user_guest" }
-        ];
-        // ==========================================
+        // Firebase Init (Gamit ang iyong personal na Firebase config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBqni6PEIcfV_jQ8zqXLSjoLo0COQ6PU90",
+            authDomain: "webex-smart-lobby.firebaseapp.com",
+            projectId: "webex-smart-lobby",
+            storageBucket: "webex-smart-lobby.firebasestorage.app",
+            messagingSenderId: "223507864332",
+            appId: "1:223507864332:web:480c961f9636020f3ac729"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'webex-smart-lobby';
 
-        // Render the buttons
-        const userGrid = document.getElementById('user-grid');
+        // State Variables
+        let membersDatabase = [];
+        let currentLevel = 'purok'; // 'purok', 'grupo', 'pangalan'
+        let selectedPurok = null;
+        let selectedGrupo = null;
+        let selectedMember = null;
+        let unsubscribeSnapshot = null;
         
-        expectedGuests.forEach(guest => {
-            const button = document.createElement('button');
-            button.className = "flex items-center justify-between w-full p-4 border border-gray-200 rounded-xl hover:border-teal-500 hover:bg-teal-50 hover:shadow-md transition-all group text-left";
+        // Admin Filters
+        let adminFilterStatus = 'all'; // 'all', 'joined', 'pending'
+        let adminFilterPurok = 'all'; // 'all', '1', '2', etc.
+
+        // Custom Notification UI
+        window.showNotification = function(title, message, isError = false) {
+            document.getElementById('notif-title').innerText = title;
+            document.getElementById('notif-message').innerText = message;
             
-            button.innerHTML = `
-                <div class="flex flex-col">
-                    <span class="font-medium text-gray-700 group-hover:text-teal-700">${guest.displayName}</span>
-                    <span class="text-xs text-gray-400 group-hover:text-teal-500">${guest.expectedName}</span>
-                </div>
-                <svg class="w-5 h-5 text-gray-400 group-hover:text-teal-500 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-            `;
+            const successIcon = document.getElementById('notif-icon-success');
+            const errorIcon = document.getElementById('notif-icon-error');
             
-            button.onclick = () => joinMeeting(guest.displayName, guest.expectedName);
-            userGrid.appendChild(button);
+            if(isError) {
+                successIcon.classList.remove('flex'); successIcon.classList.add('hidden');
+                errorIcon.classList.remove('hidden'); errorIcon.classList.add('flex');
+            } else {
+                errorIcon.classList.remove('flex'); errorIcon.classList.add('hidden');
+                successIcon.classList.remove('hidden'); successIcon.classList.add('flex');
+            }
+            
+            document.getElementById('notification-modal').classList.remove('hidden');
+            document.getElementById('notification-modal').classList.add('flex');
+        };
+
+        window.closeNotification = function() {
+            document.getElementById('notification-modal').classList.add('hidden');
+            document.getElementById('notification-modal').classList.remove('flex');
+        };
+
+        // Custom Confirm UI
+        let currentConfirmCallback = null;
+        window.showConfirm = function(title, message, onConfirm) {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-message').innerText = message;
+            currentConfirmCallback = onConfirm;
+            
+            const btn = document.getElementById('confirm-action-btn');
+            btn.onclick = () => {
+                window.closeConfirm();
+                if(currentConfirmCallback) currentConfirmCallback();
+            };
+
+            document.getElementById('confirm-modal').classList.remove('hidden');
+            document.getElementById('confirm-modal').classList.add('flex');
+        };
+
+        window.closeConfirm = function() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            document.getElementById('confirm-modal').classList.remove('flex');
+            currentConfirmCallback = null;
+        };
+
+        // Initialize App & Auth
+        const initApp = async () => {
+            try {
+                // Direkta tayong gagamit ng Anonymous auth para sa iyong sariling Firebase
+                await signInAnonymously(auth);
+            } catch(e) {
+                console.error("Auth Error:", e);
+                document.getElementById('initial-loading').classList.add('hidden');
+                window.showNotification("Connection Error", "Hindi maka-konekta sa database. Siguraduhing naka-enable ang Anonymous Sign-in sa Firebase.", true);
+            }
+        };
+
+        // Auth Listener & Data Fetcher
+        onAuthStateChanged(auth, (user) => {
+            if (!user) return;
+            
+            const membersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'members');
+            
+            unsubscribeSnapshot = onSnapshot(membersCollectionRef, (snapshot) => {
+                membersDatabase = [];
+                snapshot.forEach((doc) => {
+                    membersDatabase.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Hide initial loading screen
+                document.getElementById('initial-loading').classList.add('hidden');
+                
+                // Show Onboarding if it's user's first time on this browser
+                if(!localStorage.getItem('webexLobbySetupDone')) {
+                    document.getElementById('setup-modal').classList.remove('hidden');
+                } else {
+                    if(currentLevel === 'purok') window.renderPurok();
+                    else if(currentLevel === 'grupo') window.renderGrupo();
+                    else window.renderPangalan();
+                }
+
+                // If Admin modal is open, refresh the list and stats
+                if(!document.getElementById('admin-modal').classList.contains('hidden')) {
+                    renderAdminList();
+                }
+
+            }, (error) => {
+                console.error("Error fetching data:", error);
+                document.getElementById('initial-loading').classList.add('hidden');
+                window.showNotification("Error", "May problema sa pagkuha ng data. Paki-refresh ang page.", true);
+            });
         });
 
-        // Function para isara ang Error Modal
-        function closeErrorModal() {
-            const errorModal = document.getElementById('error-modal');
-            errorModal.classList.add('hidden');
-            errorModal.classList.remove('flex');
+        // Start App
+        initApp();
+
+        // Admin Function: Switch Tabs
+        window.switchAdminTab = function(tab) {
+            const btnList = document.getElementById('tab-btn-list');
+            const btnImport = document.getElementById('tab-btn-import');
+            const tabList = document.getElementById('admin-tab-list');
+            const tabImport = document.getElementById('admin-tab-import');
+
+            if(tab === 'list') {
+                btnList.className = "px-4 py-3 text-sm font-bold text-teal-600 border-b-2 border-teal-600 focus:outline-none";
+                btnImport.className = "px-4 py-3 text-sm font-medium text-gray-500 hover:text-teal-600 focus:outline-none transition-colors";
+                tabList.classList.remove('hidden');
+                tabImport.classList.add('hidden');
+                renderAdminList();
+            } else {
+                btnImport.className = "px-4 py-3 text-sm font-bold text-teal-600 border-b-2 border-teal-600 focus:outline-none";
+                btnList.className = "px-4 py-3 text-sm font-medium text-gray-500 hover:text-teal-600 focus:outline-none transition-colors";
+                tabImport.classList.remove('hidden');
+                tabList.classList.add('hidden');
+            }
+        };
+
+        // Admin Function: Render Dynamic Purok Tabs
+        function renderAdminPurokTabs(availablePuroks) {
+            const tabsContainer = document.getElementById('admin-purok-tabs');
+            tabsContainer.innerHTML = '';
+
+            const activeClass = "px-4 py-1.5 text-sm font-bold rounded-t-lg border-b-4 border-teal-500 text-teal-800 bg-teal-50 transition-colors whitespace-nowrap cursor-pointer";
+            const inactiveClass = "px-4 py-1.5 text-sm font-medium rounded-t-lg border-b-4 border-transparent text-gray-500 hover:text-teal-600 hover:bg-gray-50 transition-colors whitespace-nowrap cursor-pointer";
+
+            // "Lahat ng Purok" Tab
+            const btnAll = document.createElement('button');
+            btnAll.innerText = "Lahat ng Purok";
+            btnAll.className = adminFilterPurok === 'all' ? activeClass : inactiveClass;
+            btnAll.onclick = () => { window.setAdminFilterPurok('all'); };
+            tabsContainer.appendChild(btnAll);
+
+            // Individual Purok Tabs
+            availablePuroks.forEach(purok => {
+                const btn = document.createElement('button');
+                btn.innerText = `Purok ${purok}`;
+                btn.className = adminFilterPurok === purok ? activeClass : inactiveClass;
+                btn.onclick = () => { window.setAdminFilterPurok(purok); };
+                tabsContainer.appendChild(btn);
+            });
         }
 
-        // Function executed when a name is clicked
-        async function joinMeeting(displayName, expectedName) {
-            // 0. I-check kung handa na ang Meeting Number at Password
-            if (!meetingConfig.meetingNumber || meetingConfig.meetingNumber.trim() === "" || meetingConfig.meetingNumber === "123456789" ||
-                !meetingConfig.password || meetingConfig.password.trim() === "" || meetingConfig.password === "Password123!") {
-                
-                const errorModal = document.getElementById('error-modal');
-                errorModal.classList.remove('hidden');
-                errorModal.classList.add('flex');
-                return; // Pigilan ang pagtuloy ng code at redirect kung hindi pa handa
+        // Admin Function: Set Purok Filter
+        window.setAdminFilterPurok = function(purok) {
+            adminFilterPurok = purok;
+            renderAdminList(); // Ire-render at ia-update din ang kulay ng tabs
+        };
+
+        // Admin Function: Set Status Filter
+        window.setAdminFilterStatus = function(status) {
+            adminFilterStatus = status;
+            
+            const btnAll = document.getElementById('filter-btn-all');
+            const btnJoined = document.getElementById('filter-btn-joined');
+            const btnPending = document.getElementById('filter-btn-pending');
+            
+            const activeClass = "px-4 py-1.5 text-sm font-semibold rounded-full bg-teal-100 text-teal-800 transition-colors whitespace-nowrap";
+            const inactiveClass = "px-4 py-1.5 text-sm font-semibold rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors whitespace-nowrap";
+            
+            btnAll.className = status === 'all' ? activeClass : inactiveClass;
+            btnJoined.className = status === 'joined' ? activeClass : inactiveClass;
+            btnPending.className = status === 'pending' ? activeClass : inactiveClass;
+            
+            renderAdminList();
+        };
+
+        // Admin Function: Render List inside Modal
+        function renderAdminList() {
+            const container = document.getElementById('admin-list-container');
+            container.innerHTML = '';
+
+            if(membersDatabase.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-gray-500">Walang naka-save na miyembro. Pumunta sa "Import Data" tab.</div>`;
+                document.getElementById('stat-total').innerText = 0;
+                document.getElementById('stat-joined').innerText = 0;
+                document.getElementById('stat-pending').innerText = 0;
+                renderAdminPurokTabs([]);
+                return;
             }
 
-            // 1. Kopyahin ang EXPECTED NAME sa clipboard (In-optimize para sa Mobile)
+            // 1. Get unique Puroks to build the Tabs
+            const uniquePuroks = [...new Set(membersDatabase.map(m => m.purok))].sort((a,b) => {
+                let numA = parseInt(a), numB = parseInt(b);
+                return (!isNaN(numA) && !isNaN(numB)) ? numA - numB : a.localeCompare(b);
+            });
+            renderAdminPurokTabs(uniquePuroks);
+
+            // 2. Filter by Purok for the Statistics Context
+            let purokFilteredMembers = membersDatabase;
+            if (adminFilterPurok !== 'all') {
+                purokFilteredMembers = membersDatabase.filter(m => m.purok === adminFilterPurok);
+            }
+
+            // 3. Calculate and Update Statistics (Based on Selected Purok)
+            const totalMembersCount = purokFilteredMembers.length;
+            const joinedMembersCount = purokFilteredMembers.filter(m => (m.clickCount || 0) > 0).length;
+            const pendingMembersCount = totalMembersCount - joinedMembersCount;
+
+            document.getElementById('stat-total').innerText = totalMembersCount;
+            document.getElementById('stat-joined').innerText = joinedMembersCount;
+            document.getElementById('stat-pending').innerText = pendingMembersCount;
+            
+            // Update Label for Stats Context
+            document.getElementById('stat-label-context').innerText = adminFilterPurok === 'all' ? 'Mga Bilang para sa: Lahat ng Purok' : `Mga Bilang para sa: Purok ${adminFilterPurok}`;
+
+            // 4. Filter by Connection Status for Rendering the List
+            let finalFilteredMembers = purokFilteredMembers;
+            if (adminFilterStatus === 'joined') {
+                finalFilteredMembers = finalFilteredMembers.filter(m => (m.clickCount || 0) > 0);
+            } else if (adminFilterStatus === 'pending') {
+                finalFilteredMembers = finalFilteredMembers.filter(m => (m.clickCount || 0) === 0);
+            }
+
+            if(finalFilteredMembers.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">Walang miyembro na tumutugma sa filter na ito.</div>`;
+                return;
+            }
+
+            // 5. Render the list, grouped by Purok
+            const visiblePuroks = [...new Set(finalFilteredMembers.map(m => m.purok))].sort((a,b) => {
+                let numA = parseInt(a), numB = parseInt(b);
+                return (!isNaN(numA) && !isNaN(numB)) ? numA - numB : a.localeCompare(b);
+            });
+
+            visiblePuroks.forEach(purok => {
+                const pSection = document.createElement('div');
+                pSection.className = 'mb-6';
+                pSection.innerHTML = `<h3 class="font-bold text-lg text-teal-800 mb-3 border-b border-gray-200 pb-2">Purok ${purok}</h3>`;
+                
+                const ul = document.createElement('ul');
+                ul.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
+
+                const mList = finalFilteredMembers.filter(m => m.purok === purok).sort((a,b) => {
+                    let numA = parseInt(a.grupo), numB = parseInt(b.grupo);
+                    if(numA !== numB) return numA - numB;
+                    return a.displayName.localeCompare(b.displayName);
+                });
+
+                mList.forEach(m => {
+                    const li = document.createElement('li');
+                    li.className = 'p-3 bg-gray-50 hover:bg-teal-50 border border-gray-200 rounded-xl flex justify-between items-center transition-colors';
+                    
+                    const clickCount = m.clickCount || 0;
+                    const badgeHTML = clickCount > 0 
+                        ? `<span class="ml-2 bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide border border-green-200 shadow-sm">Nakapasok (${clickCount}x)</span>` 
+                        : `<span class="ml-2 bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide border border-gray-200">Pending</span>`;
+
+                    li.innerHTML = `
+                        <div class="overflow-hidden">
+                            <div class="font-semibold text-gray-800 truncate flex items-center">
+                                ${m.displayName}
+                                ${badgeHTML}
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Grupo ${m.grupo} | <span class="text-teal-600 font-mono">${m.expectedName}</span></div>
+                        </div>
+                        <button onclick="window.deleteMember('${m.id}')" class="text-red-500 hover:bg-red-100 p-2 rounded-lg ml-2 flex-shrink-0 transition-colors" title="Burahin ang miyembrong ito">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    `;
+                    ul.appendChild(li);
+                });
+
+                pSection.appendChild(ul);
+                container.appendChild(pSection);
+            });
+        }
+
+        // Admin Function: Delete Single Member
+        window.deleteMember = function(docId) {
+            window.showConfirm("Burahin ang Miyembro?", "Sigurado ka bang gusto mong burahin ang miyembrong ito?", async () => {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'members', docId));
+                } catch(e) {
+                    console.error("Delete error", e);
+                    window.showNotification("Error", "Hindi mabura ang data.", true);
+                }
+            });
+        };
+
+        // Admin Function: Clear Entire Database (Pinakalinaw para sa Admin)
+        window.confirmClearDatabase = function() {
+            if(membersDatabase.length === 0) return;
+            window.showConfirm("Burahin Lahat ng Name?", "Sigurado ka bang gusto mong burahin ang LAHAT ng nakalistang pangalan at database? Hindi na ito maibabalik.", async () => {
+                const loading = document.getElementById('import-loading');
+                loading.classList.remove('hidden');
+                try {
+                    // Manual batch delete
+                    const membersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'members');
+                    const snapshot = await getDocs(membersCollectionRef);
+                    const batch = writeBatch(db);
+                    snapshot.docs.forEach((d) => {
+                        batch.delete(d.ref);
+                    });
+                    await batch.commit();
+                    
+                    // I-reset ang mga filters
+                    adminFilterStatus = 'all';
+                    adminFilterPurok = 'all';
+                    
+                    window.showNotification("Tagumpay", "Lahat ng data ay nabura na.");
+                } catch (e) {
+                    console.error(e);
+                    window.showNotification("Error", "Nabigo ang pagbura ng data.", true);
+                } finally {
+                    loading.classList.add('hidden');
+                }
+            });
+        };
+
+        // Admin Function: Download CSV Template
+        window.downloadTemplate = function() {
+            const csvContent = "LOKAL,PUROK,GRUPO,SURNAME,FIRST NAME,SUFFIX\nMarikina,1,1,Dela Cruz,Juan,Jr\nMarikina,1,2,Santos,Maria,\n";
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "Webex_Lobby_Template.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        // Admin Function: Handle CSV Upload
+        window.handleCSVUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const loading = document.getElementById('import-loading');
+            loading.classList.remove('hidden');
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const text = e.target.result;
+                const rows = parseCSV(text);
+                const newMembers = [];
+
+                let startIndex = 0;
+                if (rows.length > 0 && rows[0].length > 0 && (rows[0][0].toLowerCase().includes('lokal') || rows[0][3].toLowerCase().includes('surname'))) {
+                    startIndex = 1;
+                }
+
+                for (let i = startIndex; i < rows.length; i++) {
+                    const columns = rows[i];
+                    if (columns.length >= 5 && columns[0] && columns[1] && columns[2]) {
+                        const lokal = columns[0].trim();
+                        const purok = columns[1].trim();
+                        const grupo = columns[2].trim();
+                        const surname = columns[3].trim();
+                        const firstName = columns[4].trim();
+                        const suffix = columns[5] ? columns[5].trim() : "";
+
+                        const displayName = `${firstName} ${surname} ${suffix}`.trim();
+                        
+                        let expectedName = `${lokal}_${purok}_${grupo}_${surname}_${firstName}`;
+                        if (suffix) expectedName += `_${suffix}`;
+                        expectedName = expectedName.toLowerCase();
+
+                        newMembers.push({
+                            purok: purok,
+                            grupo: grupo,
+                            displayName: displayName,
+                            expectedName: expectedName,
+                            clickCount: 0,
+                            lastClicked: null
+                        });
+                    }
+                }
+
+                if (newMembers.length > 0) {
+                    try {
+                        const membersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'members');
+                        
+                        // 1. Delete existing docs first to have a clean import
+                        const existingDocs = await getDocs(membersCollectionRef);
+                        
+                        // Firestore limits batch to 500 ops. To be safe, we do sequential batches
+                        let batch = writeBatch(db);
+                        let opCount = 0;
+
+                        for(const d of existingDocs.docs) {
+                            batch.delete(d.ref);
+                            opCount++;
+                            if(opCount === 400) { await batch.commit(); batch = writeBatch(db); opCount = 0; }
+                        }
+                        
+                        // 2. Add new docs
+                        for(const member of newMembers) {
+                            const newDocRef = doc(membersCollectionRef);
+                            batch.set(newDocRef, member);
+                            opCount++;
+                            if(opCount >= 400) { await batch.commit(); batch = writeBatch(db); opCount = 0; }
+                        }
+
+                        if(opCount > 0) {
+                            await batch.commit();
+                        }
+
+                        event.target.value = ''; // Reset file input
+                        loading.classList.add('hidden');
+                        window.showNotification("Tagumpay!", `Nai-import ang ${newMembers.length} na miyembro sa database.`);
+                        
+                        // I-reset ang mga filter para makita agad ang bagong data
+                        adminFilterStatus = 'all';
+                        adminFilterPurok = 'all';
+                        window.switchAdminTab('list');
+
+                    } catch(err) {
+                        console.error("Batch write failed", err);
+                        loading.classList.add('hidden');
+                        window.showNotification("Error", "May problema sa pag-save sa database.", true);
+                    }
+                } else {
+                    loading.classList.add('hidden');
+                    window.showNotification("Walang Data", "Walang nakitang valid na miyembro sa file. Siguraduhing tama ang format.", true);
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        // Simple CSV Parser handling basic commas and quotes
+        function parseCSV(text) {
+            const rows = [];
+            let cur = '';
+            let inQuotes = false;
+            let row = [];
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    row.push(cur.trim());
+                    cur = '';
+                } else if (char === '\n' && !inQuotes) {
+                    row.push(cur.trim());
+                    rows.push(row);
+                    row = [];
+                    cur = '';
+                } else {
+                    if (char !== '\r') cur += char;
+                }
+            }
+            if (cur) row.push(cur.trim());
+            if (row.length > 0 && row.some(x => x !== "")) rows.push(row);
+            return rows;
+        }
+
+        // Access and Setup Triggers
+        document.addEventListener('keydown', function(event) {
+            if (event.ctrlKey && event.shiftKey && (event.key === 'A' || event.key === 'a')) {
+                window.openAdminModal();
+            }
+        });
+
+        let iconClicks = 0;
+        let iconClickTimer;
+        window.hiddenAdminAccess = function() {
+            iconClicks++;
+            if(iconClicks === 1) {
+                iconClickTimer = setTimeout(() => { iconClicks = 0; }, 2000);
+            }
+            if(iconClicks >= 5) {
+                clearTimeout(iconClickTimer);
+                iconClicks = 0;
+                window.openAdminModal();
+            }
+        }
+
+        window.openAdminModal = function() {
+            document.getElementById('admin-modal').classList.remove('hidden');
+            document.getElementById('admin-modal').classList.add('flex');
+            window.switchAdminTab('list');
+        }
+
+        window.closeModal = function(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            document.getElementById(modalId).classList.remove('flex');
+        }
+
+        window.nextSetupStep = function() {
+            document.getElementById('setup-step-1').classList.add('hidden');
+            document.getElementById('setup-step-2').classList.remove('hidden');
+        }
+
+        window.finishSetup = function() {
+            document.getElementById('setup-modal').classList.add('hidden');
+            localStorage.setItem('webexLobbySetupDone', 'true');
+            window.renderPurok();
+        }
+
+        // Dynamic UI Generation for User Flow
+        const grid = document.getElementById('dynamic-grid');
+        const title = document.getElementById('selection-title');
+        const backBtn = document.getElementById('back-btn');
+        const spacer = document.getElementById('spacer');
+
+        function updateHeaderUI(showBack, titleText) {
+            title.innerText = titleText;
+            if(showBack) {
+                backBtn.classList.remove('hidden');
+                spacer.classList.remove('hidden');
+            } else {
+                backBtn.classList.add('hidden');
+                spacer.classList.add('hidden');
+            }
+        }
+
+        window.renderPurok = function() {
+            currentLevel = 'purok';
+            updateHeaderUI(false, "Piliin ang Purok");
+            grid.innerHTML = '';
+            
+            const puroks = [...new Set(membersDatabase.map(m => m.purok))].sort((a,b) => {
+                let numA = parseInt(a), numB = parseInt(b);
+                return (!isNaN(numA) && !isNaN(numB)) ? numA - numB : a.localeCompare(b);
+            });
+            
+            puroks.forEach(p => {
+                const btn = document.createElement('button');
+                btn.className = "flex items-center justify-center w-full py-6 px-4 border border-teal-100 rounded-xl hover:border-teal-500 hover:bg-teal-50 hover:shadow-md transition-all group font-bold text-teal-800 text-xl bg-white shadow-sm";
+                btn.innerText = `Purok ${p}`;
+                btn.onclick = () => {
+                    selectedPurok = p;
+                    window.renderGrupo();
+                };
+                grid.appendChild(btn);
+            });
+
+            if(puroks.length === 0) {
+                grid.innerHTML = `<div class="text-center text-gray-500 col-span-full py-8">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Wala pang miyembro. Sabihin sa Admin na mag-import ng data.
+                </div>`;
+            }
+        }
+
+        window.renderGrupo = function() {
+            currentLevel = 'grupo';
+            updateHeaderUI(true, `Purok ${selectedPurok} - Grupo`);
+            grid.innerHTML = '';
+            
+            const groups = [...new Set(membersDatabase.filter(m => m.purok === selectedPurok).map(m => m.grupo))].sort((a,b) => {
+                let numA = parseInt(a), numB = parseInt(b);
+                return (!isNaN(numA) && !isNaN(numB)) ? numA - numB : a.localeCompare(b);
+            });
+            
+            groups.forEach(g => {
+                const btn = document.createElement('button');
+                btn.className = "flex items-center justify-center w-full py-6 px-4 border border-blue-100 rounded-xl hover:border-blue-500 hover:bg-blue-50 hover:shadow-md transition-all group font-bold text-blue-800 text-xl bg-white shadow-sm";
+                btn.innerText = `Grupo ${g}`;
+                btn.onclick = () => {
+                    selectedGrupo = g;
+                    window.renderPangalan();
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        window.renderPangalan = function() {
+            currentLevel = 'pangalan';
+            updateHeaderUI(true, `Pangulo ng Sambahayan`);
+            
+            // Paalala UI bago ang listahan ng mga pangalan
+            grid.innerHTML = `
+                <div class="bg-blue-50 border border-blue-200 p-4 rounded-xl shadow-sm mb-2">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-blue-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-bold text-blue-800">Paalala</h3>
+                            <p class="text-xs text-blue-600 mt-1">Pindutin lamang ang <strong>iyong sariling pangalan</strong> upang maiwasan ang isyu sa pag-log in at attendance.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            grid.className = "flex flex-col gap-3 flex-1 content-start";
+            
+            const names = membersDatabase.filter(m => m.purok === selectedPurok && m.grupo === selectedGrupo)
+                                         .sort((a, b) => a.displayName.localeCompare(b.displayName));
+            
+            names.forEach(member => {
+                const btn = document.createElement('button');
+                btn.className = "flex items-center justify-between w-full p-4 border border-gray-200 rounded-xl hover:border-teal-500 hover:bg-teal-50 hover:shadow-md transition-all group text-left bg-white";
+                btn.innerHTML = `
+                    <div class="flex flex-col truncate pr-2">
+                        <span class="font-bold text-gray-800 group-hover:text-teal-800 text-lg truncate">${member.displayName}</span>
+                        <span class="text-xs text-gray-400 group-hover:text-teal-600 mt-1 truncate">${member.expectedName}</span>
+                    </div>
+                    <div class="bg-gray-50 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all flex-shrink-0">
+                        <svg class="w-6 h-6 text-gray-400 group-hover:text-teal-500 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </div>
+                `;
+                btn.onclick = () => {
+                    selectedMember = member;
+                    document.getElementById('reminder-modal').classList.remove('hidden');
+                    document.getElementById('reminder-modal').classList.add('flex');
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        window.goBack = function() {
+            grid.className = "grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 content-start";
+            if (currentLevel === 'grupo') {
+                window.renderPurok();
+            } else if (currentLevel === 'pangalan') {
+                window.renderGrupo();
+            }
+        }
+
+        // Webex Redirect Logic
+        window.executeJoinSequence = async function() {
+            window.closeModal('reminder-modal');
+
+            if (!meetingConfig.meetingNumber || meetingConfig.meetingNumber.trim() === "" || meetingConfig.meetingNumber === "123456789") {
+                window.showNotification("Hindi Pa Handa", "Ang Meeting Number at Password ay hindi pa nakatakda sa configuration.", true);
+                return; 
+            }
+
+            // I-update ang click tracking sa database
+            try {
+                if (selectedMember && selectedMember.id) {
+                    const memberRef = doc(db, 'artifacts', appId, 'public', 'data', 'members', selectedMember.id);
+                    await updateDoc(memberRef, {
+                        clickCount: increment(1),
+                        lastClicked: serverTimestamp()
+                    });
+                }
+            } catch(e) {
+                console.error("Hindi ma-update ang tracking count", e);
+            }
+
             try {
                 if (navigator.clipboard && window.isSecureContext) {
-                    await navigator.clipboard.writeText(expectedName);
+                    await navigator.clipboard.writeText(selectedMember.expectedName);
                 } else {
                     const hiddenInput = document.getElementById('hidden-clipboard');
-                    hiddenInput.value = expectedName; 
+                    hiddenInput.value = selectedMember.expectedName; 
                     hiddenInput.focus();
                     hiddenInput.select();
-                    hiddenInput.setSelectionRange(0, 99999); // Mahalaga ito para sa mga mobile devices (iOS)
+                    hiddenInput.setSelectionRange(0, 99999);
                     document.execCommand('copy');
                 }
             } catch (err) {
                 console.error("Hindi makopya ang pangalan: ", err);
             }
             
-            // 2. Ipakita ang Loading Modal at i-update ang mensahe
             const modal = document.getElementById('redirect-modal');
-            const greeting = document.getElementById('modal-greeting');
-            const instructionText = modal.querySelector('p.text-gray-600');
-            
-            greeting.innerText = `Kinokonekta si ${displayName}...`;
-            instructionText.innerHTML = `Kinopya namin ang iyong Meeting Name <strong>(${expectedName})</strong>. Ididirekta ka na namin sa Webex website.<br><br>Kapag hiningi na ng Webex ang iyong pangalan, i-paste (Ctrl+V o Long Press) na lamang ito!`;
+            document.getElementById('modal-greeting').innerText = `Kinokonekta si ${selectedMember.displayName}...`;
+            document.getElementById('copied-name-display').innerText = selectedMember.expectedName;
             
             modal.classList.remove('hidden');
             modal.classList.add('flex');
 
-            // 3. I-redirect diretso sa Web Link
-            // Inalis na natin ang awtomatikong pag-trigger sa webex:// app deep link.
-            // Ngayon, ang Webex page na mismong magtatanong "Open Webex App?" sa screen.
             setTimeout(() => {
                 window.location.href = meetingConfig.link;
-            }, 3000); // Binigyan ng 3 segundo para mabasa ng user ang instruction
+            }, 3500); 
         }
+
     </script>
 </body>
 </html>
