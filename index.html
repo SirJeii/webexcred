@@ -448,8 +448,12 @@
             <div class="flex-1 flex items-center justify-center relative bg-black">
                 <video id="camera-video" class="min-w-full min-h-full object-cover" autoplay playsinline></video>
             </div>
-            <div class="p-6 pb-10 bg-black flex justify-center items-center">
-                <button type="button" onclick="window.capturePhoto()" class="w-16 h-16 rounded-full border-4 border-white bg-white/50 hover:bg-white transition-colors"></button>
+            <div class="p-6 pb-10 bg-black flex justify-between items-center px-12">
+                <div class="w-12"></div> <!-- Spacer to keep capture button centered -->
+                <button type="button" onclick="window.capturePhoto()" class="w-16 h-16 rounded-full border-4 border-white bg-white/50 hover:bg-white transition-colors flex-shrink-0"></button>
+                <button type="button" onclick="window.switchCamera()" class="w-12 h-12 flex items-center justify-center bg-white/20 rounded-full hover:bg-white/40 transition-colors text-white flex-shrink-0" title="Switch Camera">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
             </div>
             <canvas id="camera-canvas" class="hidden"></canvas>
         </div>
@@ -676,19 +680,40 @@
         // ------------------ PASUGO DRIVE LOGIC (TELEGRAM) ------------------
         let currentCameraStream = null;
         let pasugoImageFile = null;
+        let currentFacingMode = 'environment';
 
         window.openCameraModal = async function() {
             const modal = document.getElementById('camera-modal');
             const video = document.getElementById('camera-video');
             modal.classList.remove('hidden');
             try {
-                // Request environment camera specifically for mobile devices
-                currentCameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                if (currentCameraStream) {
+                    currentCameraStream.getTracks().forEach(track => track.stop());
+                }
+                // Request camera based on current facing mode
+                currentCameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode } });
                 video.srcObject = currentCameraStream;
             } catch (err) {
                 console.error("Camera access error:", err);
                 window.closeCameraModal();
                 window.showNotification("Error", "Hindi mabuksan ang camera. Siguraduhing pinayagan ang camera access sa iyong browser settings.", true);
+            }
+        };
+
+        window.switchCamera = async function() {
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            const video = document.getElementById('camera-video');
+            try {
+                if (currentCameraStream) {
+                    currentCameraStream.getTracks().forEach(track => track.stop());
+                }
+                currentCameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode } });
+                video.srcObject = currentCameraStream;
+            } catch (err) {
+                console.error("Camera switch error:", err);
+                window.showNotification("Error", "Hindi makalipat ng camera. Maaaring iisa lamang ang camera ng iyong device.", true);
+                // Revert mode if failed
+                currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
             }
         };
 
