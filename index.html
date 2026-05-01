@@ -144,16 +144,21 @@
                         </div>
                     </div>
 
-                    <!-- Nabigyan First & Last Name (Dynamic Multiple) -->
+                    <!-- Nabigyan First & Last Name (Dynamic Multiple with Contact) -->
                     <div class="mb-4">
-                        <label class="block text-gray-700 text-sm font-bold mb-2 uppercase tracking-wide">Nabigyan <span class="text-red-500">*</span></label>
-                        <div id="nabigyan-container" class="space-y-3">
-                            <div class="flex gap-2 nabigyan-row">
-                                <div class="w-1/2">
-                                    <input type="text" required oninput="this.value = this.value.toUpperCase()" class="nabigyan-first w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-800 uppercase" placeholder="FIRST NAME">
+                        <label class="block text-gray-700 text-sm font-bold mb-2 uppercase tracking-wide">Nabigyan (Mga Tumanggap) <span class="text-red-500">*</span></label>
+                        <div id="nabigyan-container" class="space-y-4">
+                            <div class="flex flex-col gap-2 nabigyan-row p-4 border border-blue-100 rounded-xl bg-blue-50/50 relative">
+                                <div class="flex gap-2 w-full">
+                                    <div class="w-1/2">
+                                        <input type="text" required oninput="this.value = this.value.toUpperCase()" class="nabigyan-first w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 uppercase text-sm" placeholder="FIRST NAME">
+                                    </div>
+                                    <div class="w-1/2">
+                                        <input type="text" required oninput="this.value = this.value.toUpperCase()" class="nabigyan-last w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 uppercase text-sm" placeholder="LAST NAME">
+                                    </div>
                                 </div>
-                                <div class="w-1/2">
-                                    <input type="text" required oninput="this.value = this.value.toUpperCase()" class="nabigyan-last w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-800 uppercase" placeholder="LAST NAME">
+                                <div class="w-full">
+                                    <input type="tel" class="nabigyan-contact w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 text-sm" placeholder="Contact No. ng Nabigyan (Opsiyonal)">
                                 </div>
                             </div>
                         </div>
@@ -162,11 +167,8 @@
                             Magdagdag ng Nabigyan
                         </button>
                     </div>
-                    <div class="mb-4">
-                        <label class="block text-gray-700 text-sm font-bold mb-2 uppercase tracking-wide">Contact No. (Opsiyonal)</label>
-                        <input type="tel" id="pasugo-contact" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-800" placeholder="09xxxxxxxxx">
-                    </div>
-                    <div class="mb-8">
+
+                    <div class="mb-8 mt-6">
                         <label class="block text-gray-700 text-sm font-bold mb-2 uppercase tracking-wide">Larawan (Katibayan) <span class="text-red-500">*</span></label>
                         <div class="flex gap-3 mb-3">
                             <button type="button" onclick="document.getElementById('pasugo-upload-input').click()" class="flex-1 bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-300 transition-colors flex items-center justify-center">
@@ -397,6 +399,7 @@
                                 <th scope="col" class="px-4 py-3">Nabigyan</th>
                                 <th scope="col" class="px-4 py-3">Contact No.</th>
                                 <th scope="col" class="px-4 py-3">Petsa</th>
+                                <th scope="col" class="px-4 py-3 text-right">Aksyon</th>
                             </tr>
                         </thead>
                         <tbody id="admin-pasugo-list-container" class="divide-y divide-gray-200"></tbody>
@@ -433,6 +436,7 @@
                                 <th scope="col" class="px-4 py-3">Nag-anyaya</th>
                                 <th scope="col" class="px-4 py-3">Contact No.</th>
                                 <th scope="col" class="px-4 py-3">Oras ng Pagdalo</th>
+                                <th scope="col" class="px-4 py-3 text-right">Aksyon</th>
                             </tr>
                         </thead>
                         <tbody id="admin-misyon-list-container" class="divide-y divide-gray-200"></tbody>
@@ -725,7 +729,11 @@
             document.getElementById('confirm-message').innerText = message;
             currentConfirmCallback = onConfirm;
             const btn = document.getElementById('confirm-action-btn');
-            btn.onclick = () => { window.closeConfirm(); if(currentConfirmCallback) currentConfirmCallback(); };
+            btn.onclick = () => { 
+                const cb = currentConfirmCallback; // I-save pansamantala
+                window.closeConfirm(); 
+                if(cb) cb(); // I-run ang delete function
+            };
             document.getElementById('confirm-modal').classList.remove('hidden');
             document.getElementById('confirm-modal').classList.add('flex');
         };
@@ -855,18 +863,30 @@
             });
         };
 
+        window.removeNabigyanRow = function(btn) {
+            const row = btn.closest('.nabigyan-row');
+            if (row) {
+                row.remove();
+            }
+        };
+
         window.addNabigyanRow = function() {
             const container = document.getElementById('nabigyan-container');
             const row = document.createElement('div');
-            row.className = 'flex gap-2 nabigyan-row';
+            row.className = 'flex flex-col gap-2 nabigyan-row p-4 border border-blue-100 rounded-xl bg-blue-50/50 relative mt-2';
             row.innerHTML = `
-                <div class="w-1/2">
-                    <input type="text" required oninput="this.value = this.value.toUpperCase()" class="nabigyan-first w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-800 uppercase" placeholder="FIRST NAME">
+                <div class="flex gap-2 w-full">
+                    <div class="w-1/2">
+                        <input type="text" required oninput="this.value = this.value.toUpperCase()" class="nabigyan-first w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 uppercase text-sm" placeholder="FIRST NAME">
+                    </div>
+                    <div class="w-1/2">
+                        <input type="text" required oninput="this.value = this.value.toUpperCase()" class="nabigyan-last w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 uppercase text-sm" placeholder="LAST NAME">
+                    </div>
                 </div>
-                <div class="w-1/2 relative">
-                    <input type="text" required oninput="this.value = this.value.toUpperCase()" class="nabigyan-last w-full p-3 pr-10 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-800 uppercase" placeholder="LAST NAME">
-                    <button type="button" onclick="this.closest('.nabigyan-row').remove()" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-red-500 hover:bg-red-50 rounded-full transition-colors" title="Alisin">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                <div class="w-full relative">
+                    <input type="tel" class="nabigyan-contact w-full p-3 pr-10 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 text-sm" placeholder="Contact No. ng Nabigyan (Opsiyonal)">
+                    <button type="button" onclick="window.removeNabigyanRow(this)" class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-red-500 hover:bg-red-50 rounded-full transition-colors z-10 cursor-pointer" title="Alisin">
+                        <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
             `;
@@ -881,12 +901,17 @@
             
             // I-reset sa isang input field na lang ulit
             document.getElementById('nabigyan-container').innerHTML = `
-                <div class="flex gap-2 nabigyan-row">
-                    <div class="w-1/2">
-                        <input type="text" required oninput="this.value = this.value.toUpperCase()" class="nabigyan-first w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-800 uppercase" placeholder="FIRST NAME">
+                <div class="flex flex-col gap-2 nabigyan-row p-4 border border-blue-100 rounded-xl bg-blue-50/50 relative">
+                    <div class="flex gap-2 w-full">
+                        <div class="w-1/2">
+                            <input type="text" required oninput="this.value = this.value.toUpperCase()" class="nabigyan-first w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 uppercase text-sm" placeholder="FIRST NAME">
+                        </div>
+                        <div class="w-1/2">
+                            <input type="text" required oninput="this.value = this.value.toUpperCase()" class="nabigyan-last w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 uppercase text-sm" placeholder="LAST NAME">
+                        </div>
                     </div>
-                    <div class="w-1/2">
-                        <input type="text" required oninput="this.value = this.value.toUpperCase()" class="nabigyan-last w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-gray-50 text-gray-800 uppercase" placeholder="LAST NAME">
+                    <div class="w-full">
+                        <input type="tel" class="nabigyan-contact w-full p-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 text-sm" placeholder="Contact No. ng Nabigyan (Opsiyonal)">
                     </div>
                 </div>
             `;
@@ -914,9 +939,8 @@
             const nagbigayLast = document.getElementById('pasugo-nagbigay-last').value.trim();
             const status = document.getElementById('pasugo-tungkulin-status').value;
             const tungkulin = document.getElementById('pasugo-tungkulin').value;
-            const contact = document.getElementById('pasugo-contact').value.trim();
 
-            // Kunin lahat ng Nabigyan
+            // Kunin lahat ng Nabigyan at Contacts nila
             const nabigyanRows = document.querySelectorAll('.nabigyan-row');
             let nabigyanList = [];
             let hasEmptyNabigyan = false;
@@ -924,8 +948,9 @@
             nabigyanRows.forEach(row => {
                 const f = row.querySelector('.nabigyan-first').value.trim();
                 const l = row.querySelector('.nabigyan-last').value.trim();
+                const c = row.querySelector('.nabigyan-contact').value.trim();
                 if (!f || !l) hasEmptyNabigyan = true;
-                else nabigyanList.push(`${f} ${l}`);
+                else nabigyanList.push({ name: `${f} ${l}`, contact: c });
             });
 
             if(!purok || !grupo || !nagbigayFirst || !nagbigayLast || !status || (status === 'Maytungkulin' && !tungkulin)) {
@@ -951,9 +976,9 @@
 
             try {
                 const pasugoRef = collection(db, 'artifacts', appId, 'public', 'data', 'pasugo_entries');
-                // I-save sa database nang pa-isa-isa ang bawat nabigyan
-                for (const nabigyan of nabigyanList) {
-                    await addDoc(pasugoRef, { purok, grupo, nagbigay, status, tungkulin: status === 'Maytungkulin' ? tungkulin : '', nabigyan, contact, createdAt: serverTimestamp() });
+                // I-save sa database nang pa-isa-isa ang bawat nabigyan kalakip ang contact nila
+                for (const nabigyanObj of nabigyanList) {
+                    await addDoc(pasugoRef, { purok, grupo, nagbigay, status, tungkulin: status === 'Maytungkulin' ? tungkulin : '', nabigyan: nabigyanObj.name, contact: nabigyanObj.contact, createdAt: serverTimestamp() });
                 }
             } catch(dbErr) { console.error("Error saving to Firestore", dbErr); }
 
@@ -961,9 +986,8 @@
             const chatId = "-5276620624";
             
             // Format Listahan para sa Caption
-            let nabigyanText = nabigyanList.map(n => `- ${n}`).join('\n');
+            let nabigyanText = nabigyanList.map(n => `- ${n.name}` + (n.contact ? ` (📞 ${n.contact})` : '')).join('\n');
             let caption = `📌 Purok: ${purok}\n📍 Grupo: ${grupo}\n👤 Nagbigay: ${nagbigay}\n👥 Mga Nabigyan:\n${nabigyanText}`;
-            if(contact) caption += `\n📞 Contact No: ${contact}`;
 
             const formData = new FormData();
             formData.append("chat_id", chatId);
@@ -1133,6 +1157,17 @@
             else renderAdminPasugoTungkulinList();
         };
 
+        window.deletePasugoEntry = function(docId) {
+            window.showConfirm("Burahin ang Talaan?", "Sigurado ka bang gusto mong burahin ang record na ito?", async () => {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pasugo_entries', docId));
+                    window.showNotification("Tagumpay", "Ang record ay matagumpay na nabura.");
+                } catch(e) {
+                    window.showNotification("Error", "Hindi mabura ang record.", true);
+                }
+            });
+        };
+
         function renderAdminPasugoList() {
             const container = document.getElementById('admin-pasugo-list-container');
             container.innerHTML = '';
@@ -1142,7 +1177,7 @@
             if(adminPasugoFilterPurok !== 'all') filteredData = filteredData.filter(p => p.purok === adminPasugoFilterPurok);
             filteredData.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
-            if(filteredData.length === 0) { container.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">Walang record.</td></tr>`; return; }
+            if(filteredData.length === 0) { container.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">Walang record.</td></tr>`; return; }
 
             filteredData.forEach(p => {
                 const tr = document.createElement('tr'); tr.className = "hover:bg-gray-50";
@@ -1164,6 +1199,9 @@
                     <td class="px-4 py-3 font-bold text-teal-700 flex items-center">${p.nabigyan} ${attendedBadge}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">${p.contact || '-'}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-400">${dateStr}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-right">
+                        <button onclick="window.deletePasugoEntry('${p.id}')" class="text-red-500 hover:bg-red-100 p-1.5 rounded-lg transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                    </td>
                 `;
                 container.appendChild(tr);
             });
@@ -1205,6 +1243,9 @@
                         <td class="px-4 py-2 whitespace-nowrap text-sm text-teal-700 font-semibold">${p.nabigyan}</td>
                         <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">Purok ${p.purok} / Grp ${p.grupo}</td>
                         <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-400">${p.createdAt ? new Date(p.createdAt.toMillis()).toLocaleString('en-US', {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'}) : 'N/A'}</td>
+                        <td class="px-4 py-2 whitespace-nowrap text-right">
+                            <button onclick="window.deletePasugoEntry('${p.id}')" class="text-red-500 hover:bg-red-100 p-1.5 rounded-lg transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                        </td>
                     </tr>
                 `).join('');
 
@@ -1224,6 +1265,7 @@
                                     <th class="px-4 py-2">Nabigyan</th>
                                     <th class="px-4 py-2">Lokalidad</th>
                                     <th class="px-4 py-2">Petsa</th>
+                                    <th class="px-4 py-2 text-right">Aksyon</th>
                                 </tr>
                             </thead>
                             <tbody>${tbodyHTML}</tbody>
@@ -1255,7 +1297,7 @@
             if(adminMisyonFilterPurok !== 'all') filteredData = misyonAttendees.filter(p => p.purok === adminMisyonFilterPurok);
             filteredData.sort((a, b) => (b.attendedAt?.toMillis() || 0) - (a.attendedAt?.toMillis() || 0));
 
-            if(filteredData.length === 0) { container.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Walang record.</td></tr>`; return; }
+            if(filteredData.length === 0) { container.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">Walang record.</td></tr>`; return; }
 
             filteredData.forEach(p => {
                 const tr = document.createElement('tr'); tr.className = "hover:bg-indigo-50";
@@ -1268,6 +1310,9 @@
                     <td class="px-4 py-3">${p.nagbigay}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">${p.contact || '-'}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-400">${dateStr}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-right">
+                        <button onclick="window.deletePasugoEntry('${p.id}')" class="text-red-500 hover:bg-red-100 p-1.5 rounded-lg transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                    </td>
                 `;
                 container.appendChild(tr);
             });
