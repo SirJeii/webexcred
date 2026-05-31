@@ -168,6 +168,7 @@
                         </button>
                     </div>
 
+                    <!-- Images -->
                     <div class="mb-8 mt-6">
                         <label class="block text-gray-700 text-sm font-bold mb-2 uppercase tracking-wide">Larawan (Katibayan) <span class="text-red-500">*</span></label>
                         <div class="flex gap-3 mb-3">
@@ -228,7 +229,7 @@
                         </div>
                     </div>
 
-                    <!-- Multiple Names -->
+                    <!-- Multiple Names with Kapisanan -->
                     <div class="mb-4">
                         <label class="block text-gray-700 text-sm font-bold mb-2 uppercase tracking-wide">Mga Dumalo (Pangalan at Kapisanan) <span class="text-red-500">*</span></label>
                         <div id="aktibidad-names-container" class="space-y-3">
@@ -322,13 +323,13 @@
             </svg>
             <span class="text-[10px] font-bold uppercase tracking-wider">Webex</span>
         </button>
-        <button onclick="window.switchTab('pasugo')" id="nav-pasugo" class="nav-btn flex-1 flex flex-col items-center py-3 text-gray-400 hover:text-blue-500 transition-colors border-l border-r border-gray-100">
+        <button onclick="window.switchTab('pasugo')" id="nav-pasugo" class="nav-btn flex-1 flex flex-col items-center py-3 text-gray-400 hover:text-blue-500 transition-colors border-l border-gray-100">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
             </svg>
             <span class="text-[10px] font-bold uppercase tracking-wider">Pasugo</span>
         </button>
-        <button onclick="window.switchTab('aktibidad')" id="nav-aktibidad" class="nav-btn flex-1 flex flex-col items-center py-3 text-gray-400 hover:text-orange-500 transition-colors border-r border-gray-100">
+        <button onclick="window.switchTab('aktibidad')" id="nav-aktibidad" class="nav-btn flex-1 flex flex-col items-center py-3 text-gray-400 hover:text-orange-500 transition-colors border-l border-r border-gray-100">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
             </svg>
@@ -830,6 +831,12 @@
         let currentCameraTarget = null; // 'pasugo' or 'aktibidad'
         let currentCameraStream = null;
         let currentFacingMode = 'environment';
+
+        // Helper function to Title Case the expected names properly
+        const formatTitleCase = (str) => {
+            if (!str) return "";
+            return str.toLowerCase().replace(/(?:^|[\s-])\w/g, match => match.toUpperCase());
+        };
 
         window.checkWebexSetupAndRender = function() {
             const isWebexActive = !document.getElementById('view-webex').classList.contains('hidden');
@@ -1990,12 +1997,22 @@
             reader.onload = async function(e) {
                 const rows = parseCSV(e.target.result); const newMembers = [];
                 let startIndex = (rows.length > 0 && rows[0].length > 0 && (rows[0][0].toLowerCase().includes('lokal') || rows[0][3].toLowerCase().includes('surname'))) ? 1 : 0;
+                
                 for (let i = startIndex; i < rows.length; i++) {
                     const columns = rows[i];
                     if (columns.length >= 5 && columns[0] && columns[1] && columns[2]) {
-                        const lokal = columns[0].trim(), purok = columns[1].trim(), grupo = columns[2].trim(), surname = columns[3].trim(), firstName = columns[4].trim(), suffix = columns[5] ? columns[5].trim() : "";
+                        const lokal = columns[0].trim(), purok = columns[1].trim(), grupo = columns[2].trim();
+                        const surnameRaw = columns[3].trim(), firstNameRaw = columns[4].trim(), suffixRaw = columns[5] ? columns[5].trim() : "";
+                        
+                        const firstName = formatTitleCase(firstNameRaw);
+                        const surname = formatTitleCase(surnameRaw);
+                        const suffix = formatTitleCase(suffixRaw);
+
                         const displayName = `${firstName} ${surname} ${suffix}`.trim();
-                        let expectedName = `${lokal}_${purok}_${grupo}_${surname}_${firstName}`; if (suffix) expectedName += `_${suffix}`; expectedName = expectedName.toLowerCase();
+                        
+                        let expectedName = `${lokal}_${purok}-${grupo}_${firstName} ${surname}`; 
+                        if (suffix) expectedName += ` ${suffix}`;
+                        
                         newMembers.push({ purok, grupo, displayName, expectedName, clickCount: 0, lastClicked: null });
                     }
                 }
@@ -2264,15 +2281,20 @@
         }
 
         window.submitManualForm = async function() {
-            const lokal = document.getElementById('manual-lokal').value.trim(); const purok = document.getElementById('manual-purok').value.trim(); const grupo = document.getElementById('manual-grupo').value.trim(); const firstName = document.getElementById('manual-firstname').value.trim(); const surname = document.getElementById('manual-surname').value.trim(); const suffix = document.getElementById('manual-suffix').value.trim(); const cellphone = document.getElementById('manual-cellphone').value.trim();
+            const lokal = document.getElementById('manual-lokal').value.trim(); const purok = document.getElementById('manual-purok').value.trim(); const grupo = document.getElementById('manual-grupo').value.trim(); const firstNameRaw = document.getElementById('manual-firstname').value.trim(); const surnameRaw = document.getElementById('manual-surname').value.trim(); const suffixRaw = document.getElementById('manual-suffix').value.trim(); const cellphone = document.getElementById('manual-cellphone').value.trim();
             const device = document.getElementById('manual-device').value; const camera = document.getElementById('manual-camera').value; const internet = document.getElementById('manual-internet').value; const speed = document.getElementById('manual-speed').value; const tv = document.getElementById('manual-tv').value; const tvSize = document.getElementById('manual-tvsize').value;
 
-            if (!purok || !grupo || !firstName || !surname) { window.showNotification("Kulang ang Impormasyon", "Pakiusap, punan ang lahat ng required na field.", true); return; }
+            if (!purok || !grupo || !firstNameRaw || !surnameRaw) { window.showNotification("Kulang ang Impormasyon", "Pakiusap, punan ang lahat ng required na field.", true); return; }
 
             const btn = document.getElementById('manual-submit-btn'); const spinner = document.getElementById('manual-spinner'); btn.disabled = true; spinner.classList.remove('hidden');
 
+            const firstName = formatTitleCase(firstNameRaw);
+            const surname = formatTitleCase(surnameRaw);
+            const suffix = formatTitleCase(suffixRaw);
+
             const displayName = `${firstName} ${surname} ${suffix}`.trim();
-            let expectedName = `${lokal}_${purok}_${grupo}_${surname}_${firstName}`; if (suffix) expectedName += `_${suffix}`; expectedName = expectedName.toLowerCase();
+            let expectedName = `${formatTitleCase(lokal)}_${purok}-${grupo}_${firstName} ${surname}`; 
+            if (suffix) expectedName += ` ${suffix}`;
 
             const newMemberData = { purok, grupo, displayName, expectedName, cellphone, device, camera, internet, speed, tv, tvSize, clickCount: 0, lastClicked: null, createdAt: serverTimestamp(), isManual: true };
 
