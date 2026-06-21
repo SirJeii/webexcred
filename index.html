@@ -609,6 +609,28 @@
 
             <!-- Admin Tab: Settings -->
             <div id="admin-tab-settings" class="flex-1 overflow-y-auto p-4 md:p-6 bg-white hidden custom-scrollbar">
+                
+                <!-- Naming Convention Settings -->
+                <div class="mb-6 p-5 bg-teal-50 border border-teal-200 rounded-xl">
+                    <h4 class="font-bold text-teal-800 text-md mb-2">Webex Naming Convention</h4>
+                    <p class="text-xs text-teal-700 mb-4">I-set ang format ng pangalan para sa Webex. Available variables: <br>
+                        <code class="font-bold bg-white px-1 rounded">{LOKAL}</code>, <code class="font-bold bg-white px-1 rounded">{PUROK}</code>, <code class="font-bold bg-white px-1 rounded">{GRUPO}</code>, <code class="font-bold bg-white px-1 rounded">{FIRSTNAME}</code>, <code class="font-bold bg-white px-1 rounded">{SURNAME}</code>, <code class="font-bold bg-white px-1 rounded">{SUFFIX}</code>
+                    </p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs font-bold text-gray-600 uppercase">Default Lokal</label>
+                            <input type="text" id="setting-lokal" class="w-full mt-1 p-2.5 border border-gray-300 rounded-lg text-sm bg-white" placeholder="Sampaguita Village" onchange="window.saveNamingSettings()">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-600 uppercase">Format Template</label>
+                            <input type="text" id="setting-naming-format" class="w-full mt-1 p-2.5 border border-gray-300 rounded-lg text-sm bg-white font-mono" placeholder="{LOKAL}_{PUROK}-{GRUPO}_{FIRSTNAME} {SURNAME} {SUFFIX}" onchange="window.saveNamingSettings()">
+                        </div>
+                        <button onclick="window.applyNamingConventionToAll()" class="mt-2 text-sm bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg shadow-sm hover:bg-teal-700 transition">
+                            I-apply sa Lahat ng Kasalukuyang Record
+                        </button>
+                    </div>
+                </div>
+
                 <h3 class="font-bold text-gray-800 text-lg mb-4">App Features Control</h3>
                 <p class="text-gray-600 text-sm mb-6">Piliin kung anong tab o feature ang makikita ng mga user. Kung naka-off, mawawala ito sa bottom menu.</p>
                 
@@ -807,7 +829,16 @@
         let membersDatabase = [];
         let pasugoDatabase = [];
         let aktibidadDatabase = [];
-        let appConfig = { webexEnabled: true, pasugoEnabled: true, misyonEnabled: true, aktibidadEnabled: true };
+        
+        // Default app configuration with naming convention added
+        let appConfig = { 
+            webexEnabled: true, 
+            pasugoEnabled: true, 
+            misyonEnabled: true, 
+            aktibidadEnabled: true,
+            defaultLokal: "Sampaguita Village",
+            namingConvention: "{LOKAL}_{PUROK}-{GRUPO}_{FIRSTNAME} {SURNAME} {SUFFIX}"
+        };
         
         let currentLevel = 'purok';
         let selectedPurok = null;
@@ -828,14 +859,90 @@
 
         let pasugoImages = []; 
         let aktibidadImages = [];
-        let currentCameraTarget = null; // 'pasugo' or 'aktibidad'
+        let currentCameraTarget = null;
         let currentCameraStream = null;
         let currentFacingMode = 'environment';
 
-        // Helper function to Title Case the expected names properly
         const formatTitleCase = (str) => {
             if (!str) return "";
             return str.toLowerCase().replace(/(?:^|[\s-])\w/g, match => match.toUpperCase());
+        };
+
+        // NEW: Dynamic Naming Generator
+        window.generateExpectedName = function(lokal, purok, grupo, firstName, surname, suffix) {
+            let template = appConfig.namingConvention || '{LOKAL}_{PUROK}-{GRUPO}_{FIRSTNAME} {SURNAME} {SUFFIX}';
+            let result = template
+                .replace(/{LOKAL}/gi, lokal || '')
+                .replace(/{PUROK}/gi, purok || '')
+                .replace(/{GRUPO}/gi, grupo || '')
+                .replace(/{FIRSTNAME}/gi, firstName || '')
+                .replace(/{SURNAME}/gi, surname || '')
+                .replace(/{SUFFIX}/gi, suffix || '');
+            
+            // Clean up multi-spaces (e.g. if suffix is missing)
+            return result.replace(/\s+/g, ' ').trim();
+        };
+
+        // NEW: Save Naming Setup from Settings Panel
+        window.saveNamingSettings = async function() {
+            const lokal = document.getElementById('setting-lokal').value.trim();
+            const format = document.getElementById('setting-naming-format').value.trim();
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'appSettings'), {
+                    defaultLokal: lokal || 'Sampaguita Village',
+                    namingConvention: format || '{LOKAL}_{PUROK}-{GRUPO}_{FIRSTNAME} {SURNAME} {SUFFIX}'
+                });
+                window.showNotification("Saved", "Matagumpay na na-save ang Naming Convention settings.");
+            } catch(e) {
+                console.error(e); window.showNotification("Error", "Hindi mai-save ang settings.", true);
+            }
+        };
+
+        // NEW: Apply newly defined Webex Name template retroactively to existing records
+        window.applyNamingConventionToAll = async function() {
+            if(membersDatabase.length === 0) return;
+            window.showConfirm("I-apply sa Lahat?", "Ire-recalculate nito ang Webex Name ng lahat ng naka-save na member base sa bagong format na nakasaad. Sigurado ka ba?", async () => {
+                const btn = document.querySelector(`button[onclick="window.applyNamingConventionToAll()"]`);
+                const origText = btn.innerText;
+                btn.innerText = "Nag-aapply..."; btn.disabled = true;
+
+                try {
+                    let batch = writeBatch(db);
+                    let opCount = 0;
+                    
+                    for (const m of membersDatabase) {
+                        // Extract fallback if older records are missing individual name fields
+                        let mFirstName = m.firstName;
+                        let mSurname = m.surname;
+                        if(!mFirstName || !mSurname) {
+                            const parts = (m.displayName || '').split(' ');
+                            mFirstName = parts[0] || '';
+                            mSurname = parts.slice(1).join(' ') || '';
+                        }
+                        
+                        let mLokal = m.lokal || appConfig.defaultLokal || 'Sampaguita Village';
+                        let newName = window.generateExpectedName(mLokal, m.purok, m.grupo, mFirstName, mSurname, m.suffix || '');
+
+                        const memberRef = doc(db, 'artifacts', appId, 'public', 'data', 'members', m.id);
+                        batch.update(memberRef, { expectedName: newName });
+                        opCount++;
+                        
+                        // Commit every 400 records to prevent Firestore limit errors
+                        if(opCount === 400) {
+                            await batch.commit();
+                            batch = writeBatch(db);
+                            opCount = 0;
+                        }
+                    }
+                    if(opCount > 0) await batch.commit();
+                    window.showNotification("Tagumpay", "Na-update ang Webex format ng lahat ng miyembro.");
+                } catch(e) {
+                    console.error(e);
+                    window.showNotification("Error", "May error sa pag-update ng records.", true);
+                } finally {
+                    btn.innerText = origText; btn.disabled = false;
+                }
+            });
         };
 
         window.checkWebexSetupAndRender = function() {
@@ -1261,7 +1368,6 @@
 
             try {
                 const aktibidadRef = collection(db, 'artifacts', appId, 'public', 'data', 'aktibidad_entries');
-                // Save one document containing the array of attendees (name and kapisanan)
                 await addDoc(aktibidadRef, { 
                     purok, 
                     grupo, 
@@ -1312,8 +1418,10 @@
             const configRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'appSettings');
             onSnapshot(configRef, (docSnap) => {
                 if(docSnap.exists()) {
-                    appConfig = { ...appConfig, ...docSnap.data() }; // Merge with defaults
+                    appConfig = { ...appConfig, ...docSnap.data() }; 
                     if (appConfig.aktibidadEnabled === undefined) appConfig.aktibidadEnabled = true;
+                    if (!appConfig.namingConvention) appConfig.namingConvention = '{LOKAL}_{PUROK}-{GRUPO}_{FIRSTNAME} {SURNAME} {SUFFIX}';
+                    if (!appConfig.defaultLokal) appConfig.defaultLokal = 'Sampaguita Village';
                     
                     document.getElementById('nav-webex').style.display = appConfig.webexEnabled ? 'flex' : 'none';
                     document.getElementById('nav-pasugo').style.display = appConfig.pasugoEnabled ? 'flex' : 'none';
@@ -1323,7 +1431,6 @@
                     const views = ['webex', 'pasugo', 'aktibidad', 'misyon'];
                     const activeView = views.find(v => !document.getElementById(`view-${v}`).classList.contains('hidden'));
                     
-                    // Basic fallback if current tab is disabled
                     if (activeView === 'webex' && !appConfig.webexEnabled) window.switchTab(appConfig.pasugoEnabled ? 'pasugo' : (appConfig.aktibidadEnabled ? 'aktibidad' : (appConfig.misyonEnabled ? 'misyon' : '')));
                     if (activeView === 'pasugo' && !appConfig.pasugoEnabled) window.switchTab(appConfig.webexEnabled ? 'webex' : (appConfig.aktibidadEnabled ? 'aktibidad' : (appConfig.misyonEnabled ? 'misyon' : '')));
                     if (activeView === 'aktibidad' && !appConfig.aktibidadEnabled) window.switchTab(appConfig.webexEnabled ? 'webex' : (appConfig.pasugoEnabled ? 'pasugo' : (appConfig.misyonEnabled ? 'misyon' : '')));
@@ -1333,6 +1440,13 @@
                     const pToggle = document.getElementById('setting-pasugo'); if(pToggle) pToggle.checked = appConfig.pasugoEnabled;
                     const aToggle = document.getElementById('setting-aktibidad'); if(aToggle) aToggle.checked = appConfig.aktibidadEnabled;
                     const mToggle = document.getElementById('setting-misyon'); if(mToggle) mToggle.checked = appConfig.misyonEnabled;
+                    
+                    const locInput = document.getElementById('setting-lokal');
+                    if(locInput && document.activeElement !== locInput) locInput.value = appConfig.defaultLokal;
+                    
+                    const fmtInput = document.getElementById('setting-naming-format');
+                    if(fmtInput && document.activeElement !== fmtInput) fmtInput.value = appConfig.namingConvention;
+
                 } else {
                     setDoc(configRef, appConfig);
                 }
@@ -1458,12 +1572,10 @@
                         let nameStr = "";
                         let kapStr = "";
                         
-                        // Check if it's the new object structure or the old string structure
                         if(typeof att === 'object' && att !== null) {
                             nameStr = att.name;
                             kapStr = att.kapisanan;
                         } else {
-                            // Fallback logic for old records
                             nameStr = att;
                             kapStr = entry.kapisanan || 'N/A';
                         }
@@ -1473,7 +1585,7 @@
                         }
                         
                         allAttendeesFlat.push({
-                            id: entry.id, // Group ID for deletion
+                            id: entry.id,
                             purok: entry.purok,
                             grupo: entry.grupo,
                             kapisanan: kapStr,
@@ -2007,13 +2119,12 @@
                         const firstName = formatTitleCase(firstNameRaw);
                         const surname = formatTitleCase(surnameRaw);
                         const suffix = formatTitleCase(suffixRaw);
-
                         const displayName = `${firstName} ${surname} ${suffix}`.trim();
                         
-                        let expectedName = `${lokal}_${purok}-${grupo}_${firstName} ${surname}`; 
-                        if (suffix) expectedName += ` ${suffix}`;
+                        // NEW: Use dynamic naming convention
+                        let expectedName = window.generateExpectedName(lokal, purok, grupo, firstName, surname, suffix);
                         
-                        newMembers.push({ purok, grupo, displayName, expectedName, clickCount: 0, lastClicked: null });
+                        newMembers.push({ lokal, purok, grupo, firstName, surname, suffix, displayName, expectedName, clickCount: 0, lastClicked: null });
                     }
                 }
                 if (newMembers.length > 0) {
@@ -2243,7 +2354,6 @@
                         <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
                             <h4 class="text-xs font-bold text-teal-700 uppercase mb-3 border-b border-gray-200 pb-1">Personal Info</h4>
                             <div class="space-y-3">
-                                <div class="hidden"><input type="text" id="manual-lokal" value="Sampaguita Village"></div>
                                 <div class="flex gap-3">
                                     <div class="w-1/2"><label class="text-xs font-bold text-gray-600 uppercase">Purok <span class="text-red-500">*</span></label><input type="number" id="manual-purok" value="${selectedPurok || ''}" class="w-full mt-1 p-2.5 border border-gray-300 rounded-lg text-sm"></div>
                                     <div class="w-1/2"><label class="text-xs font-bold text-gray-600 uppercase">Grupo <span class="text-red-500">*</span></label><input type="number" id="manual-grupo" value="${selectedGrupo || ''}" class="w-full mt-1 p-2.5 border border-gray-300 rounded-lg text-sm"></div>
@@ -2281,7 +2391,7 @@
         }
 
         window.submitManualForm = async function() {
-            const lokal = document.getElementById('manual-lokal').value.trim(); const purok = document.getElementById('manual-purok').value.trim(); const grupo = document.getElementById('manual-grupo').value.trim(); const firstNameRaw = document.getElementById('manual-firstname').value.trim(); const surnameRaw = document.getElementById('manual-surname').value.trim(); const suffixRaw = document.getElementById('manual-suffix').value.trim(); const cellphone = document.getElementById('manual-cellphone').value.trim();
+            const purok = document.getElementById('manual-purok').value.trim(); const grupo = document.getElementById('manual-grupo').value.trim(); const firstNameRaw = document.getElementById('manual-firstname').value.trim(); const surnameRaw = document.getElementById('manual-surname').value.trim(); const suffixRaw = document.getElementById('manual-suffix').value.trim(); const cellphone = document.getElementById('manual-cellphone').value.trim();
             const device = document.getElementById('manual-device').value; const camera = document.getElementById('manual-camera').value; const internet = document.getElementById('manual-internet').value; const speed = document.getElementById('manual-speed').value; const tv = document.getElementById('manual-tv').value; const tvSize = document.getElementById('manual-tvsize').value;
 
             if (!purok || !grupo || !firstNameRaw || !surnameRaw) { window.showNotification("Kulang ang Impormasyon", "Pakiusap, punan ang lahat ng required na field.", true); return; }
@@ -2293,10 +2403,16 @@
             const suffix = formatTitleCase(suffixRaw);
 
             const displayName = `${firstName} ${surname} ${suffix}`.trim();
-            let expectedName = `${formatTitleCase(lokal)}_${purok}-${grupo}_${firstName} ${surname}`; 
-            if (suffix) expectedName += ` ${suffix}`;
+            
+            const lokal = appConfig.defaultLokal || 'Sampaguita Village';
+            
+            // NEW: Use dynamic naming convention
+            let expectedName = window.generateExpectedName(lokal, purok, grupo, firstName, surname, suffix);
 
-            const newMemberData = { purok, grupo, displayName, expectedName, cellphone, device, camera, internet, speed, tv, tvSize, clickCount: 0, lastClicked: null, createdAt: serverTimestamp(), isManual: true };
+            const newMemberData = { 
+                lokal, purok, grupo, firstName, surname, suffix,
+                displayName, expectedName, cellphone, device, camera, internet, speed, tv, tvSize, clickCount: 0, lastClicked: null, createdAt: serverTimestamp(), isManual: true 
+            };
 
             try {
                 const membersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'members');
